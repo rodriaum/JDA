@@ -27,6 +27,7 @@ import net.dv8tion.jda.internal.utils.Helpers;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.awt.*;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
@@ -488,6 +489,13 @@ public class EmbedBuilder
     public EmbedBuilder setTimestamp(@Nullable TemporalAccessor temporal)
     {
         this.timestamp = Helpers.toOffsetDateTime(temporal);
+        return this;
+    }
+
+    @Nonnull
+    public EmbedBuilder setTimestamp()
+    {
+        setTimestamp(LocalDateTime.now());
         return this;
     }
 
