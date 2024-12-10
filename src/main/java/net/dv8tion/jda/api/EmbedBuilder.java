@@ -492,10 +492,21 @@ public class EmbedBuilder
         return this;
     }
 
+    /**
+     * Sets the current timestamp of the embed to the current date and time using {@link LocalDateTime#now()}.
+     *
+     * <p><b><a href="https://raw.githubusercontent.com/discord-jda/JDA/assets/assets/docs/embeds/13-setTimestamp.png">Example</a></b>
+     *
+     * <p><b>Hint:</b> You can get the current time using {@link java.time.Instant#now() Instant.now()} or convert time from a
+     * millisecond representation by using {@link java.time.Instant#ofEpochMilli(long) Instant.ofEpochMilli(long)};
+     *
+     * @return the builder after the timestamp has been set
+     */
+
     @Nonnull
     public EmbedBuilder setTimestamp()
     {
-        setTimestamp(LocalDateTime.now());
+        this.setTimestamp(LocalDateTime.now());
         return this;
     }
 
