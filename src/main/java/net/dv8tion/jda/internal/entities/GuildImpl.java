@@ -151,6 +151,12 @@ public class GuildImpl implements Guild
             memberPresences = null;
     }
 
+    @Override
+    public boolean isDetached()
+    {
+        return false;
+    }
+
     public void invalidate()
     {
         //Remove everything from global cache
@@ -1162,6 +1168,23 @@ public class GuildImpl implements Guild
                 .map(Member::getVoiceState)
                 .filter(Objects::nonNull)
                 .collect(Helpers.toUnmodifiableList());
+    }
+
+    @Nonnull
+    @Override
+    @CheckReturnValue
+    public RestAction<GuildVoiceState> retrieveMemberVoiceStateById(long id)
+    {
+        JDAImpl jda = getJDA();
+        Route.CompiledRoute route = Route.Guilds.GET_VOICE_STATE.compile(getId(), Long.toUnsignedString(id));
+        return new RestActionImpl<>(jda, route, (response, request) ->
+        {
+            EntityBuilder entityBuilder = jda.getEntityBuilder();
+            DataObject voiceStateData = response.getObject();
+            MemberImpl member = entityBuilder.createMember(this, voiceStateData.getObject("member"), null, null);
+            entityBuilder.updateMemberCache(member);
+            return entityBuilder.createGuildVoiceState(member, voiceStateData);
+        });
     }
 
     @Nonnull
