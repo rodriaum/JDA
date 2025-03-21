@@ -500,7 +500,6 @@ public class EmbedBuilder
      *
      * @return the builder after the timestamp has been set
      */
-
     @Nonnull
     public EmbedBuilder setTimestamp()
     {
