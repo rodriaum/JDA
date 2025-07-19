@@ -66,11 +66,6 @@ public interface SlashCommandData extends CommandData
 
     @Nonnull
     @Override
-    @Deprecated
-    SlashCommandData setGuildOnly(boolean guildOnly);
-
-    @Nonnull
-    @Override
     default SlashCommandData setContexts(@Nonnull InteractionContextType... contexts)
     {
         return (SlashCommandData) CommandData.super.setContexts(contexts);
@@ -680,8 +675,6 @@ public interface SlashCommandData extends CommandData
                     .map(InteractionContextType::fromKey)
                     .collect(Helpers.toUnmodifiableEnumSet(InteractionContextType.class)));
         }
-        else if (!object.isNull("dm_permission"))
-            command.setGuildOnly(!object.getBoolean("dm_permission"));
         else
             command.setContexts(Helpers.unmodifiableEnumSet(InteractionContextType.GUILD, InteractionContextType.BOT_DM));
 

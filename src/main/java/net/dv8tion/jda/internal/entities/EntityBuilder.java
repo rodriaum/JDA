@@ -23,6 +23,8 @@ import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.audit.ActionType;
 import net.dv8tion.jda.api.audit.AuditLogChange;
 import net.dv8tion.jda.api.audit.AuditLogEntry;
+import net.dv8tion.jda.api.components.Components;
+import net.dv8tion.jda.api.components.MessageTopLevelComponentUnion;
 import net.dv8tion.jda.api.entities.*;
 import net.dv8tion.jda.api.entities.Guild.ExplicitContentLevel;
 import net.dv8tion.jda.api.entities.Guild.NotificationLevel;
@@ -41,6 +43,8 @@ import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
 import net.dv8tion.jda.api.entities.emoji.EmojiUnion;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
+import net.dv8tion.jda.api.entities.guild.SecurityIncidentActions;
+import net.dv8tion.jda.api.entities.guild.SecurityIncidentDetections;
 import net.dv8tion.jda.api.entities.messages.MessagePoll;
 import net.dv8tion.jda.api.entities.messages.MessageSnapshot;
 import net.dv8tion.jda.api.entities.sticker.*;
@@ -56,8 +60,6 @@ import net.dv8tion.jda.api.exceptions.ParsingException;
 import net.dv8tion.jda.api.interactions.DiscordLocale;
 import net.dv8tion.jda.api.interactions.IntegrationOwners;
 import net.dv8tion.jda.api.interactions.IntegrationType;
-import net.dv8tion.jda.api.interactions.components.ActionRow;
-import net.dv8tion.jda.api.interactions.components.LayoutComponent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.dv8tion.jda.api.utils.cache.CacheView;
 import net.dv8tion.jda.api.utils.data.DataArray;
@@ -65,7 +67,6 @@ import net.dv8tion.jda.api.utils.data.DataObject;
 import net.dv8tion.jda.internal.JDAImpl;
 import net.dv8tion.jda.internal.entities.channel.concrete.*;
 import net.dv8tion.jda.internal.entities.channel.mixin.attribute.IPermissionContainerMixin;
-import net.dv8tion.jda.internal.entities.channel.mixin.middleman.AudioChannelMixin;
 import net.dv8tion.jda.internal.entities.emoji.ApplicationEmojiImpl;
 import net.dv8tion.jda.internal.entities.emoji.CustomEmojiImpl;
 import net.dv8tion.jda.internal.entities.emoji.RichCustomEmojiImpl;
@@ -92,7 +93,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.*;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -250,6 +250,31 @@ public class EntityBuilder extends AbstractEntityBuilder
         }
     }
 
+    public SecurityIncidentActions createSecurityIncidentsActions(DataObject data)
+    {
+        OffsetDateTime invitesDisabledUntil = data.getOffsetDateTime("invites_disabled_until", null);
+        OffsetDateTime dmsDisabledUntil = data.getOffsetDateTime("dms_disabled_until", null);
+
+        if (invitesDisabledUntil == null && dmsDisabledUntil == null)
+            return null;
+
+        return SecurityIncidentActions.enabled(invitesDisabledUntil, dmsDisabledUntil);
+    }
+
+    public SecurityIncidentDetections createSecurityIncidentsDetections(DataObject data)
+    {
+        String timeDmSpamDetected = data.getString("dm_spam_detected_at", null);
+        String timeRaidDetected = data.getString("raid_detected_at", null);
+
+        if (timeRaidDetected == null && timeDmSpamDetected == null)
+            return null;
+
+        return new SecurityIncidentDetections(
+            timeDmSpamDetected == null ? 0 : Helpers.toTimestamp(timeDmSpamDetected),
+            timeRaidDetected == null ? 0 : Helpers.toTimestamp(timeRaidDetected)
+        );
+    }
+
     public GuildImpl createGuild(long guildId, DataObject guildJson, TLongObjectMap<DataObject> members, int memberCount)
     {
         final GuildImpl guildObj = new GuildImpl(getJDA(), guildId);
@@ -260,6 +285,8 @@ public class EntityBuilder extends AbstractEntityBuilder
         final String vanityCode = guildJson.getString("vanity_url_code", null);
         final String bannerId = guildJson.getString("banner", null);
         final String locale = guildJson.getString("preferred_locale", "en-US");
+        final SecurityIncidentActions securityIncidentActions = guildJson.optObject("incidents_data").map(this::createSecurityIncidentsActions).orElse(null);
+        final SecurityIncidentDetections securityIncidentDetections = guildJson.optObject("incidents_data").map(this::createSecurityIncidentsDetections).orElse(null);
         final DataArray roleArray = guildJson.getArray("roles");
         final DataArray channelArray = guildJson.getArray("channels");
         final DataArray threadArray = guildJson.getArray("threads");
@@ -297,6 +324,8 @@ public class EntityBuilder extends AbstractEntityBuilder
                 .setMaxPresences(maxPresences)
                 .setOwnerId(ownerId)
                 .setAfkTimeout(Guild.Timeout.fromKey(afkTimeout))
+                .setSecurityIncidentActions(securityIncidentActions)
+                .setSecurityIncidentDetections(securityIncidentDetections)
                 .setVerificationLevel(VerificationLevel.fromKey(verificationLevel))
                 .setDefaultNotificationLevel(Guild.NotificationLevel.fromKey(notificationLevel))
                 .setExplicitContentLevel(Guild.ExplicitContentLevel.fromKey(explicitContentLevel))
@@ -552,16 +581,6 @@ public class EntityBuilder extends AbstractEntityBuilder
                 // we no longer share any guilds/channels with this user so remove it from cache
                 getJDA().getUsersView().remove(user.getIdLong());
             }
-
-            GuildVoiceStateImpl voiceState = (GuildVoiceStateImpl) member.getVoiceState();
-            if (voiceState != null)
-            {
-                AudioChannel connectedChannel = voiceState.getChannel();
-                if (connectedChannel instanceof AudioChannelMixin)
-                    ((AudioChannelMixin<?>) connectedChannel).getConnectedMembersMap().remove(member.getIdLong());
-                voiceState.setConnectedChannel(null);
-            }
-
             return false;
         }
         else if (guild.getMemberById(member.getIdLong()) != null)
@@ -601,7 +620,6 @@ public class EntityBuilder extends AbstractEntityBuilder
 
     public MemberImpl createMember(GuildImpl guild, DataObject memberJson, DataObject voiceStateJson, DataObject presence)
     {
-        boolean playbackCache = false;
         User user = createUser(memberJson.getObject("user"));
         DataArray roleArray = memberJson.getArray("roles");
         MemberImpl member = (MemberImpl) guild.getMember(user);
@@ -634,36 +652,36 @@ public class EntityBuilder extends AbstractEntityBuilder
         }
 
         // Load voice state and presence if necessary
-        if (voiceStateJson != null && member.getVoiceState() != null)
+        if (voiceStateJson != null)
             createGuildVoiceState(member, voiceStateJson);
         if (presence != null)
             createPresence(member, presence);
+
+        // Make sure the voice states always have the latest member reference, even when member is uncached
+        guild.updateCacheVoiceStateMember(member);
         return member;
     }
 
     public GuildVoiceState createGuildVoiceState(MemberImpl member, DataObject voiceStateJson)
     {
-        GuildVoiceStateImpl voiceState = (GuildVoiceStateImpl) member.getVoiceState();
+        GuildVoiceStateImpl voiceState = member.getVoiceState();
         if (voiceState == null)
             voiceState = new GuildVoiceStateImpl(member);
         updateGuildVoiceState(voiceState, voiceStateJson, member);
         return voiceState;
     }
 
-    private void updateGuildVoiceState(GuildVoiceStateImpl oldVoiceState, DataObject newVoiceStateJson, MemberImpl member)
+    private void updateGuildVoiceState(GuildVoiceStateImpl currentVoiceState, DataObject newVoiceStateJson, MemberImpl member)
     {
-        Guild guild = member.getGuild();
+        GuildImpl guild = member.getGuild();
 
         final long channelId = newVoiceStateJson.getLong("channel_id");
-        AudioChannel audioChannel = (AudioChannel) guild.getGuildChannelById(channelId);
-        if (audioChannel != null)
+        AudioChannel audioChannel = guild.getChannelById(AudioChannel.class, channelId);
+        if (audioChannel == null)
         {
-            if (member.getVoiceState() != null)
-                ((AudioChannelMixin<?>) audioChannel).getConnectedMembersMap().put(member.getIdLong(), member);
-        }
-        else
-            LOG.error("Received a GuildVoiceState with a channel ID for a non-existent channel! ChannelId: {} GuildId: {} UserId: {}",
+            LOG.warn("Received a GuildVoiceState with a channel ID for a non-existent channel! ChannelId: {} GuildId: {} UserId: {}",
                     channelId, guild.getId(), member.getId());
+        }
 
         String requestToSpeak = newVoiceStateJson.getString("request_to_speak_timestamp", null);
         OffsetDateTime timestamp = null;
@@ -671,7 +689,7 @@ public class EntityBuilder extends AbstractEntityBuilder
             timestamp = OffsetDateTime.parse(requestToSpeak);
 
         // VoiceState is considered volatile so we don't expect anything to actually exist
-        oldVoiceState.setSelfMuted(newVoiceStateJson.getBoolean("self_mute"))
+        currentVoiceState.setSelfMuted(newVoiceStateJson.getBoolean("self_mute"))
                 .setSelfDeafened(newVoiceStateJson.getBoolean("self_deaf"))
                 .setGuildMuted(newVoiceStateJson.getBoolean("mute"))
                 .setGuildDeafened(newVoiceStateJson.getBoolean("deaf"))
@@ -679,7 +697,7 @@ public class EntityBuilder extends AbstractEntityBuilder
                 .setSessionId(newVoiceStateJson.getString("session_id"))
                 .setStream(newVoiceStateJson.getBoolean("self_stream"))
                 .setRequestToSpeak(timestamp)
-                .setConnectedChannel(audioChannel);
+                .updateConnectedChannel(audioChannel);
     }
 
     public void updateMember(GuildImpl guild, MemberImpl member, DataObject content, List<Role> newRoles)
@@ -1653,11 +1671,12 @@ public class EntityBuilder extends AbstractEntityBuilder
 
         // Message accessories
         MessageChannel tmpChannel = channel; // because java
-        final List<Message.Attachment> attachments = map(jsonObject, "attachments",   this::createMessageAttachment);
-        final List<MessageEmbed>       embeds      = map(jsonObject, "embeds",        this::createMessageEmbed);
-        final List<MessageReaction>    reactions   = map(jsonObject, "reactions",     (obj) -> createMessageReaction(tmpChannel, channelId, id, obj));
-        final List<StickerItem>        stickers    = map(jsonObject, "sticker_items", this::createStickerItem);
-        final List<LayoutComponent>    components  = map(jsonObject, "components",    ActionRow::fromData, obj -> obj.getInt("type", -1) == 1);
+        final List<Message.Attachment>            attachments = map(jsonObject, "attachments",   this::createMessageAttachment);
+        final List<MessageEmbed>                  embeds      = map(jsonObject, "embeds",        this::createMessageEmbed);
+        final List<MessageReaction>               reactions   = map(jsonObject, "reactions",     (obj) -> createMessageReaction(tmpChannel, channelId, id, obj));
+        final List<StickerItem>                   stickers    = map(jsonObject, "sticker_items", this::createStickerItem);
+        // Keep the unknown components so the user can read them if they want
+        final List<MessageTopLevelComponentUnion> components  = map(jsonObject, "components",    (obj) -> Components.parseComponent(MessageTopLevelComponentUnion.class, obj));
 
         MessagePoll poll = jsonObject.optObject("poll").map(EntityBuilder::createMessagePoll).orElse(null);
 
@@ -1747,6 +1766,7 @@ public class EntityBuilder extends AbstractEntityBuilder
         }
 
         // Application command and component replies
+        @SuppressWarnings("deprecation")
         Message.Interaction messageInteraction = null;
         if (!jsonObject.isNull("interaction"))
             messageInteraction = createMessageInteraction(guild, jsonObject.getObject("interaction"));
@@ -2053,6 +2073,7 @@ public class EntityBuilder extends AbstractEntityBuilder
         return new StickerPackImpl(id, stickers, name, description, coverId, bannerId, skuId);
     }
 
+    @SuppressWarnings("deprecation")
     public Message.Interaction createMessageInteraction(GuildImpl guildImpl, DataObject content)
     {
         final long id = content.getLong("id");
@@ -2104,10 +2125,11 @@ public class EntityBuilder extends AbstractEntityBuilder
         int flags = jsonObject.getInt("flags", 0);
         boolean mentionsEveryone = jsonObject.getBoolean("mention_everyone");
 
-        List<Message.Attachment> attachments = map(jsonObject, "attachments",   this::createMessageAttachment);
-        List<MessageEmbed>       embeds      = map(jsonObject, "embeds",        this::createMessageEmbed);
-        List<StickerItem>        stickers    = map(jsonObject, "sticker_items", this::createStickerItem);
-        List<LayoutComponent>    components  = map(jsonObject, "components",    ActionRow::fromData, obj -> obj.getInt("type", -1) == 1);
+        List<Message.Attachment>            attachments = map(jsonObject, "attachments",   this::createMessageAttachment);
+        List<MessageEmbed>                  embeds      = map(jsonObject, "embeds",        this::createMessageEmbed);
+        List<StickerItem>                   stickers    = map(jsonObject, "sticker_items", this::createStickerItem);
+        // Keep the unknown components so the user can read them if they want
+        List<MessageTopLevelComponentUnion> components  = map(jsonObject, "components",    (obj) -> Components.parseComponent(MessageTopLevelComponentUnion.class, obj));
 
         Guild guild = messageReference.getGuild();
         // Lazy Mention parsing and caching (includes reply mentions)
@@ -2598,12 +2620,7 @@ public class EntityBuilder extends AbstractEntityBuilder
 
     private <T> List<T> map(DataObject jsonObject, String key, Function<DataObject, T> convert)
     {
-        return map(jsonObject, key, convert, (ignored) -> true);
-    }
-
-    private <T> List<T> map(DataObject jsonObject, String key, Function<DataObject, T> convert, Predicate<DataObject> filter)
-    {
-        if (jsonObject.isNull(key))
+          if (jsonObject.isNull(key))
             return Collections.emptyList();
 
         final DataArray arr = jsonObject.getArray(key);
@@ -2613,8 +2630,6 @@ public class EntityBuilder extends AbstractEntityBuilder
             DataObject obj = arr.getObject(i);
             try
             {
-                if (!filter.test(obj))
-                    continue;
                 T result = convert.apply(obj);
                 if (result != null)
                     mappedObjects.add(result);

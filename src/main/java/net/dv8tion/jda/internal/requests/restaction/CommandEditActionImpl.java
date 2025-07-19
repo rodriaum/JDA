@@ -50,24 +50,28 @@ public class CommandEditActionImpl extends RestActionImpl<Command> implements Co
     private static final int DESCRIPTION_SET          = 1 << 1;
     private static final int OPTIONS_SET              = 1 << 2;
     private static final int PERMISSIONS_SET          = 1 << 3;
-    private static final int GUILD_ONLY_SET           = 1 << 4;
-    private static final int NSFW_SET                 = 1 << 5;
-    private static final int INTERACTION_CONTEXTS_SET = 1 << 6;
-    private static final int INTEGRATION_TYPES_SET    = 1 << 7;
+    private static final int NSFW_SET                 = 1 << 4;
+    private static final int INTERACTION_CONTEXTS_SET = 1 << 5;
+    private static final int INTEGRATION_TYPES_SET    = 1 << 6;
     private final Guild guild;
-    private int mask = 0;
-    private CommandDataImpl data = new CommandDataImpl(UNDEFINED, UNDEFINED);
 
-    public CommandEditActionImpl(JDA api, String id)
+    private int mask;
+    private CommandDataImpl data;
+
+    public CommandEditActionImpl(JDA api, Command.Type type, String id)
     {
         super(api, Route.Interactions.EDIT_COMMAND.compile(api.getSelfUser().getApplicationId(), id));
         this.guild = null;
+        this.data = CommandDataImpl.of(type, UNDEFINED, UNDEFINED);
+        this.reset();
     }
 
-    public CommandEditActionImpl(Guild guild, String id)
+    public CommandEditActionImpl(Guild guild, Command.Type type, String id)
     {
         super(guild.getJDA(), Route.Interactions.EDIT_GUILD_COMMAND.compile(guild.getJDA().getSelfUser().getApplicationId(), guild.getId(), id));
         this.guild = guild;
+        this.data = CommandDataImpl.of(type, UNDEFINED, UNDEFINED);
+        this.reset();
     }
 
     @Nonnull
@@ -89,7 +93,7 @@ public class CommandEditActionImpl extends RestActionImpl<Command> implements Co
     public CommandEditAction apply(@Nonnull CommandData commandData)
     {
         Checks.notNull(commandData, "Command Data");
-        this.mask = NAME_SET | DESCRIPTION_SET | OPTIONS_SET | PERMISSIONS_SET | GUILD_ONLY_SET | NSFW_SET | INTERACTION_CONTEXTS_SET | INTEGRATION_TYPES_SET;
+        this.mask = NAME_SET | DESCRIPTION_SET | OPTIONS_SET | PERMISSIONS_SET | NSFW_SET | INTERACTION_CONTEXTS_SET | INTEGRATION_TYPES_SET;
         this.data = (CommandDataImpl) commandData;
         return this;
     }
@@ -119,15 +123,6 @@ public class CommandEditActionImpl extends RestActionImpl<Command> implements Co
         }
         data.setName(name);
         mask |= NAME_SET;
-        return this;
-    }
-
-    @Nonnull
-    @Override
-    public CommandEditAction setGuildOnly(boolean guildOnly)
-    {
-        data.setGuildOnly(guildOnly);
-        mask |= GUILD_ONLY_SET;
         return this;
     }
 
@@ -185,8 +180,8 @@ public class CommandEditActionImpl extends RestActionImpl<Command> implements Co
     @Override
     public CommandEditAction clearOptions()
     {
-        data = new CommandDataImpl(data.getName(), data.getDescription());
-        mask &= ~OPTIONS_SET;
+        data.removeAllOptions();
+        mask |= OPTIONS_SET;
         return this;
     }
 
@@ -234,16 +229,13 @@ public class CommandEditActionImpl extends RestActionImpl<Command> implements Co
             json.remove("options");
         if (isUnchanged(PERMISSIONS_SET))
             json.remove("default_member_permissions");
-        if (isUnchanged(GUILD_ONLY_SET))
-            json.remove("dm_permission");
         if (isUnchanged(NSFW_SET))
             json.remove("nsfw");
         if (isUnchanged(INTERACTION_CONTEXTS_SET))
             json.remove("contexts");
         if (isUnchanged(INTEGRATION_TYPES_SET))
             json.remove("integration_types");
-        mask = 0;
-        data = new CommandDataImpl(UNDEFINED, UNDEFINED);
+        reset();
         return getRequestBody(json);
     }
 
@@ -252,5 +244,11 @@ public class CommandEditActionImpl extends RestActionImpl<Command> implements Co
     {
         DataObject json = response.getObject();
         request.onSuccess(new CommandImpl(api, guild, json));
+    }
+
+    private void reset()
+    {
+        mask = 0;
+        data = CommandDataImpl.of(data.getType(), UNDEFINED, UNDEFINED);
     }
 }

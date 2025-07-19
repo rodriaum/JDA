@@ -36,6 +36,8 @@ import net.dv8tion.jda.api.entities.channel.unions.AudioChannelUnion;
 import net.dv8tion.jda.api.entities.channel.unions.DefaultGuildChannelUnion;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
+import net.dv8tion.jda.api.entities.guild.SecurityIncidentActions;
+import net.dv8tion.jda.api.entities.guild.SecurityIncidentDetections;
 import net.dv8tion.jda.api.entities.sticker.GuildSticker;
 import net.dv8tion.jda.api.entities.sticker.StandardSticker;
 import net.dv8tion.jda.api.entities.sticker.StickerSnowflake;
@@ -112,6 +114,7 @@ public class GuildImpl implements Guild
     private final SnowflakeCacheViewImpl<GuildSticker> stickerCache = new SnowflakeCacheViewImpl<>(GuildSticker.class, GuildSticker::getName);
     private final MemberCacheViewImpl memberCache = new MemberCacheViewImpl();
     private final CacheView.SimpleCacheView<MemberPresenceImpl> memberPresences;
+    private final SnowflakeCacheViewImpl<GuildVoiceStateImpl> voiceStateCache = new SnowflakeCacheViewImpl<>(GuildVoiceStateImpl.class, state -> state.getMember().getEffectiveName());
 
     private CompletableFuture<Void> pendingRequestToSpeak;
 
@@ -130,6 +133,8 @@ public class GuildImpl implements Guild
     private TextChannel communityUpdatesChannel;
     private TextChannel safetyAlertsChannel;
     private Role publicRole;
+    private SecurityIncidentActions securityIncidentActions = SecurityIncidentActions.disabled();
+    private SecurityIncidentDetections securityIncidentDetections = SecurityIncidentDetections.EMPTY;
     private VerificationLevel verificationLevel = VerificationLevel.UNKNOWN;
     private NotificationLevel defaultNotificationLevel = NotificationLevel.UNKNOWN;
     private MFALevel mfaLevel = MFALevel.UNKNOWN;
@@ -269,10 +274,12 @@ public class GuildImpl implements Guild
 
     @Nonnull
     @Override
-    public CommandEditAction editCommandById(@Nonnull String id)
+    public CommandEditAction editCommandById(@Nonnull Command.Type type, @Nonnull String id)
     {
         Checks.isSnowflake(id);
-        return new CommandEditActionImpl(this, id);
+        Checks.notNull(type, "CommandType");
+        Checks.check(type != Command.Type.UNKNOWN, "Type must not be UNKNOWN");
+        return new CommandEditActionImpl(this, type, id);
     }
 
     @Nonnull
@@ -600,6 +607,22 @@ public class GuildImpl implements Guild
 
     @Nonnull
     @Override
+    public RestAction<List<ScheduledEvent>> retrieveScheduledEvents(boolean includeUserCount)
+    {
+        Route.CompiledRoute route = Route.Guilds.GET_SCHEDULED_EVENTS.compile(getId())
+                .withQueryParams("with_user_count", String.valueOf(includeUserCount));
+
+        EntityBuilder entityBuilder = getJDA().getEntityBuilder();
+        return new RestActionImpl<>(getJDA(), route,
+                (response, request) -> Helpers.mapGracefully(
+                        response.getArray().stream(DataArray::getObject),
+                        data -> entityBuilder.createScheduledEvent(this, data),
+                        "Failed to parse scheduled event"
+                ).collect(Helpers.toUnmodifiableList()));
+    }
+
+    @Nonnull
+    @Override
     public CacheRestAction<ScheduledEvent> retrieveScheduledEventById(@Nonnull String id)
     {
         Checks.isSnowflake(id);
@@ -697,6 +720,20 @@ public class GuildImpl implements Guild
     public Timeout getAfkTimeout()
     {
         return afkTimeout;
+    }
+
+    @Nonnull
+    @Override
+    public SecurityIncidentActions getSecurityIncidentActions()
+    {
+        return securityIncidentActions;
+    }
+
+    @Nonnull
+    @Override
+    public SecurityIncidentDetections getSecurityIncidentDetections()
+    {
+        return securityIncidentDetections;
     }
 
     @Override
@@ -1164,27 +1201,28 @@ public class GuildImpl implements Guild
     @Override
     public List<GuildVoiceState> getVoiceStates()
     {
-        return getMembersView().stream()
-                .map(Member::getVoiceState)
-                .filter(Objects::nonNull)
-                .collect(Helpers.toUnmodifiableList());
+        return this.voiceStateCache.applyStream(stream ->
+            stream.collect(Helpers.toUnmodifiableList())
+        );
     }
 
     @Nonnull
     @Override
     @CheckReturnValue
-    public RestAction<GuildVoiceState> retrieveMemberVoiceStateById(long id)
+    public CacheRestAction<GuildVoiceState> retrieveMemberVoiceStateById(long id)
     {
         JDAImpl jda = getJDA();
         Route.CompiledRoute route = Route.Guilds.GET_VOICE_STATE.compile(getId(), Long.toUnsignedString(id));
-        return new RestActionImpl<>(jda, route, (response, request) ->
-        {
-            EntityBuilder entityBuilder = jda.getEntityBuilder();
-            DataObject voiceStateData = response.getObject();
-            MemberImpl member = entityBuilder.createMember(this, voiceStateData.getObject("member"), null, null);
-            entityBuilder.updateMemberCache(member);
-            return entityBuilder.createGuildVoiceState(member, voiceStateData);
-        });
+        return new DeferredRestAction<>(jda, GuildVoiceState.class,
+                () -> voiceStateCache.get(id),
+                () -> new RestActionImpl<>(jda, route, (response, request) ->
+                {
+                    EntityBuilder entityBuilder = jda.getEntityBuilder();
+                    DataObject voiceStateData = response.getObject();
+                    MemberImpl member = entityBuilder.createMember(this, voiceStateData.getObject("member"), null, null);
+                    entityBuilder.updateMemberCache(member);
+                    return entityBuilder.createGuildVoiceState(member, voiceStateData);
+                }));
     }
 
     @Nonnull
@@ -1458,16 +1496,21 @@ public class GuildImpl implements Guild
 
     @Nonnull
     @Override
-    public RestAction<Void> moveVoiceMember(@Nonnull Member member, @Nullable AudioChannel audioChannel)
+    public RestAction<Void> moveVoiceMember(@Nonnull UserSnowflake user, @Nullable AudioChannel audioChannel)
     {
-        Checks.notNull(member, "Member");
-        checkGuild(member.getGuild(), "Member");
+        Checks.notNull(user, "User");
+        Member member = user instanceof Member ? (Member) user : getMember(user);
+        if (member != null)
+            checkGuild(member.getGuild(), "Member");
         if (audioChannel != null)
             checkGuild(audioChannel.getGuild(), "AudioChannel");
 
-        GuildVoiceState vState = member.getVoiceState();
-        if (vState == null)
+        if (!getJDA().isCacheFlagSet(CacheFlag.VOICE_STATE))
             throw new IllegalStateException("Cannot move a Member with disabled CacheFlag.VOICE_STATE");
+        GuildVoiceState vState = voiceStateCache.getElementById(user.getIdLong());
+        if (vState == null)
+            throw new IllegalStateException("You cannot move a Member who isn't in an AudioChannel!");
+        // A cached voice state means that the member is connected to a channel, but we'll check just in case
         AudioChannel channel = vState.getChannel();
         if (channel == null)
             throw new IllegalStateException("You cannot move a Member who isn't in an AudioChannel!");
@@ -1476,15 +1519,18 @@ public class GuildImpl implements Guild
         if (!selfMember.hasPermission(channel, Permission.VOICE_MOVE_OTHERS))
             throw new InsufficientPermissionException(channel, Permission.VOICE_MOVE_OTHERS, "This account does not have Permission to MOVE_OTHERS out of the channel that the Member is currently in.");
 
-        if (audioChannel != null
-            && !selfMember.hasPermission(audioChannel, Permission.VOICE_CONNECT)
-            && !member.hasPermission(audioChannel, Permission.VOICE_CONNECT))
-            throw new InsufficientPermissionException(audioChannel, Permission.VOICE_CONNECT,
-                                                      "Neither this account nor the Member that is attempting to be moved have the VOICE_CONNECT permission " +
-                                                      "for the destination AudioChannel, so the move cannot be done.");
+        if (member != null)
+        {
+            if (audioChannel != null
+                    && !selfMember.hasPermission(audioChannel, Permission.VOICE_CONNECT)
+                    && !member.hasPermission(audioChannel, Permission.VOICE_CONNECT))
+                throw new InsufficientPermissionException(audioChannel, Permission.VOICE_CONNECT,
+                        "Neither this account nor the Member that is attempting to be moved have the VOICE_CONNECT permission " +
+                                "for the destination AudioChannel, so the move cannot be done.");
+        }
 
         DataObject body = DataObject.empty().put("channel_id", audioChannel == null ? null : audioChannel.getId());
-        Route.CompiledRoute route = Route.Guilds.MODIFY_MEMBER.compile(getId(), member.getUser().getId());
+        Route.CompiledRoute route = Route.Guilds.MODIFY_MEMBER.compile(getId(), user.getId());
         return new RestActionImpl<>(getJDA(), route, body);
     }
 
@@ -1548,6 +1594,20 @@ public class GuildImpl implements Guild
 
     @Nonnull
     @Override
+    public AuditableRestAction<Void> modifySecurityIncidents(@Nonnull SecurityIncidentActions incidents)
+    {
+        Checks.notNull(incidents, "SecurityIncidentActions");
+        checkPermission(Permission.MANAGE_SERVER);
+
+        Route.CompiledRoute route = Route.Guilds.MODIFY_GUILD_INCIDENTS.compile(getId());
+        DataObject body = DataObject.empty()
+                .put("invites_disabled_until", Objects.toString(incidents.getInvitesDisabledUntil(), null))
+                .put("dms_disabled_until", Objects.toString(incidents.getDirectMessagesDisabledUntil(), null));
+        return new AuditableRestActionImpl<>(api, route, body);
+    }
+
+    @Nonnull
+    @Override
     public AuditableRestAction<Void> kick(@Nonnull UserSnowflake user)
     {
         Checks.notNull(user, "User");
@@ -1600,7 +1660,7 @@ public class GuildImpl implements Guild
 
         Set<Long> userIds = users.stream().map(UserSnowflake::getIdLong).collect(Collectors.toSet());
         DataObject body = DataObject.empty()
-                .put("user_ids", userIds)
+                .put("user_ids", DataArray.fromCollection(userIds))
                 .put("delete_message_seconds", deletionTime.getSeconds());
         Route.CompiledRoute route = Route.Guilds.BULK_BAN.compile(getId());
 
@@ -1667,19 +1727,15 @@ public class GuildImpl implements Guild
     {
         Checks.notNull(user, "User");
 
-        Member member = resolveMember(user);
-        if (member != null)
+        if (shouldCacheVoiceState(user.getIdLong()))
         {
-            GuildVoiceState voiceState = member.getVoiceState();
-            if (voiceState != null)
-            {
-                final AudioChannelUnion channel = voiceState.getChannel();
-                if (channel == null)
-                    throw new IllegalStateException("Can only deafen members who are currently in a voice channel");
-                if (voiceState.isGuildDeafened() == deafen)
-                    return new CompletedRestAction<>(getJDA(), null);
-                ((GuildChannelMixin<?>) channel).checkPermission(Permission.VOICE_DEAF_OTHERS);
-            }
+            GuildVoiceStateImpl voiceState = voiceStateCache.get(user.getIdLong());
+            AudioChannelUnion channel = voiceState != null ? voiceState.getChannel() : null;
+            if (channel == null)
+                throw new IllegalStateException("Can only deafen members who are currently in a voice channel");
+            if (voiceState.isGuildDeafened() == deafen)
+                return new CompletedRestAction<>(getJDA(), null);
+            ((GuildChannelMixin<?>) channel).checkPermission(Permission.VOICE_DEAF_OTHERS);
         }
 
         DataObject body = DataObject.empty().put("deaf", deafen);
@@ -1693,19 +1749,15 @@ public class GuildImpl implements Guild
     {
         Checks.notNull(user, "User");
 
-        Member member = resolveMember(user);
-        if (member != null)
+        if (shouldCacheVoiceState(user.getIdLong()))
         {
-            GuildVoiceState voiceState = member.getVoiceState();
-            if (voiceState != null)
-            {
-                final AudioChannelUnion channel = voiceState.getChannel();
-                if (channel == null)
-                    throw new IllegalStateException("Can only mute members who are currently in a voice channel");
-                if (voiceState.isGuildMuted() == mute && (mute || !voiceState.isSuppressed()))
-                    return new CompletedRestAction<>(getJDA(), null);
-                ((GuildChannelMixin<?>) channel).checkPermission(Permission.VOICE_MUTE_OTHERS);
-            }
+            GuildVoiceStateImpl voiceState = voiceStateCache.get(user.getIdLong());
+            AudioChannelUnion channel = voiceState != null ? voiceState.getChannel() : null;
+            if (channel == null)
+                throw new IllegalStateException("Can only mute members who are currently in a voice channel");
+            if (voiceState.isGuildMuted() == mute && (mute || !voiceState.isSuppressed()))
+                return new CompletedRestAction<>(getJDA(), null);
+            ((GuildChannelMixin<?>) channel).checkPermission(Permission.VOICE_MUTE_OTHERS);
         }
 
         DataObject body = DataObject.empty().put("mute", mute);
@@ -2239,6 +2291,18 @@ public class GuildImpl implements Guild
         return this;
     }
 
+    public GuildImpl setSecurityIncidentActions(SecurityIncidentActions actions)
+    {
+        this.securityIncidentActions = actions == null ? SecurityIncidentActions.disabled() : actions;
+        return this;
+    }
+
+    public GuildImpl setSecurityIncidentDetections(SecurityIncidentDetections detections)
+    {
+        this.securityIncidentDetections = detections == null ? SecurityIncidentDetections.EMPTY : detections;
+        return this;
+    }
+
     public GuildImpl setVerificationLevel(VerificationLevel level)
     {
         this.verificationLevel = level;
@@ -2356,6 +2420,12 @@ public class GuildImpl implements Guild
         return memberPresences;
     }
 
+    @Nonnull
+    public SnowflakeCacheViewImpl<GuildVoiceStateImpl> getVoiceStateView()
+    {
+        return this.voiceStateCache;
+    }
+
     // -- Member Tracking --
 
     public void onMemberAdd()
@@ -2363,9 +2433,67 @@ public class GuildImpl implements Guild
         memberCount++;
     }
 
-    public void onMemberRemove()
+    public void onMemberRemove(long memberId)
     {
         memberCount--;
+        this.voiceStateCache.remove(memberId);
+        if (this.memberPresences != null)
+            this.memberPresences.remove(memberId);
+    }
+
+    // -- Voice State Cache Handling --
+
+    public boolean shouldCacheVoiceState(long userId)
+    {
+        return userId == api.getSelfUser().getIdLong() || api.getCacheFlags().contains(CacheFlag.VOICE_STATE);
+    }
+
+    public GuildVoiceStateImpl getVoiceState(Member member)
+    {
+        GuildVoiceStateImpl voiceState = this.voiceStateCache.getElementById(member.getIdLong());
+        if (voiceState != null)
+            return voiceState;
+        if (shouldCacheVoiceState(member.getIdLong()))
+            return new GuildVoiceStateImpl(member);
+        return null;
+    }
+
+    public void updateCacheVoiceStateMember(MemberImpl member)
+    {
+        if (!shouldCacheVoiceState(member.getIdLong()))
+            return;
+
+        try (UnlockHook hook = this.voiceStateCache.writeLock())
+        {
+            GuildVoiceStateImpl voiceState = this.voiceStateCache.get(member.getIdLong());
+            if (voiceState != null)
+                voiceState.setMember(member);
+        }
+    }
+
+    public void handleVoiceStateUpdate(GuildVoiceStateImpl voiceState)
+    {
+        if (!shouldCacheVoiceState(voiceState.getIdLong()))
+            return;
+
+        try (UnlockHook hook = this.voiceStateCache.writeLock())
+        {
+            if (voiceState.getChannel() != null)
+                this.voiceStateCache.getMap().put(voiceState.getIdLong(), voiceState);
+            else
+                this.voiceStateCache.getMap().remove(voiceState.getIdLong());
+        }
+    }
+
+    public List<Member> getConnectedMembers(GuildChannel channel)
+    {
+        return this.voiceStateCache.applyStream(stream ->
+            stream
+                .filter(state -> channel.equals(state.getChannel()))
+                .map(GuildVoiceStateImpl::getMember)
+                .filter(Objects::nonNull) // sanity filter
+                .collect(Helpers.toUnmodifiableList())
+        );
     }
 
     // -- Object overrides --

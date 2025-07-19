@@ -33,6 +33,7 @@ import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.Helpers;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -70,6 +71,13 @@ public class CommandDataImpl implements SlashCommandData
         Checks.notNull(type, "Command Type");
         Checks.check(type != Command.Type.SLASH, "Cannot create slash command without description. Use `new CommandDataImpl(name, description)` instead.");
         setName(name);
+    }
+
+    public static CommandDataImpl of(@Nonnull Command.Type type, @Nonnull String name, @Nullable String description)
+    {
+        if (type == Command.Type.SLASH)
+            return new CommandDataImpl(name, description);
+        return new CommandDataImpl(type, name);
     }
 
     protected void checkType(Command.Type required, String action)
@@ -136,12 +144,6 @@ public class CommandDataImpl implements SlashCommandData
         return defaultMemberPermissions;
     }
 
-    @Override
-    public boolean isGuildOnly()
-    {
-        return contexts.size() == 1 && contexts.contains(InteractionContextType.GUILD);
-    }
-
     @Nonnull
     @Override
     public Set<InteractionContextType> getContexts()
@@ -198,16 +200,6 @@ public class CommandDataImpl implements SlashCommandData
     {
         Checks.notNull(permissions, "Permissions");
         this.defaultMemberPermissions = permissions;
-        return this;
-    }
-
-    @Nonnull
-    @Override
-    public CommandDataImpl setGuildOnly(boolean guildOnly)
-    {
-        setContexts(guildOnly
-                ? EnumSet.of(InteractionContextType.GUILD)
-                : EnumSet.of(InteractionContextType.GUILD, InteractionContextType.BOT_DM));
         return this;
     }
 
@@ -429,6 +421,12 @@ public class CommandDataImpl implements SlashCommandData
         if (modified)
             updateAllowedOptions();
         return modified;
+    }
+
+    public void removeAllOptions()
+    {
+        this.options.clear();
+        this.updateAllowedOptions();
     }
 
     // Update allowed conditions after removing options

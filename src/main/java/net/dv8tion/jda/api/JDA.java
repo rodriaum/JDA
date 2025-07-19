@@ -32,6 +32,7 @@ import net.dv8tion.jda.api.hooks.IEventManager;
 import net.dv8tion.jda.api.interactions.commands.Command;
 import net.dv8tion.jda.api.interactions.commands.build.CommandData;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
+import net.dv8tion.jda.api.managers.ApplicationManager;
 import net.dv8tion.jda.api.managers.AudioManager;
 import net.dv8tion.jda.api.managers.DirectAudioController;
 import net.dv8tion.jda.api.managers.Presence;
@@ -63,8 +64,8 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.Duration;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BooleanSupplier;
@@ -813,17 +814,19 @@ public interface JDA extends IGuildChannelContainer<Channel>
      * <p>If there is no command with the provided ID,
      * this RestAction fails with {@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_COMMAND ErrorResponse.UNKNOWN_COMMAND}
      *
+     * @param  type
+     *         The command type
      * @param  id
      *         The id of the command to edit
      *
      * @throws IllegalArgumentException
-     *         If the provided id is not a valid snowflake
+     *         If the provided id is not a valid snowflake or the type is {@link Command.Type#UNKNOWN}
      *
      * @return {@link CommandEditAction} used to edit the command
      */
     @Nonnull
     @CheckReturnValue
-    CommandEditAction editCommandById(@Nonnull String id);
+    CommandEditAction editCommandById(@Nonnull Command.Type type, @Nonnull String id);
 
     /**
      * Edit an existing global command by id.
@@ -831,16 +834,21 @@ public interface JDA extends IGuildChannelContainer<Channel>
      * <p>If there is no command with the provided ID,
      * this RestAction fails with {@link net.dv8tion.jda.api.requests.ErrorResponse#UNKNOWN_COMMAND ErrorResponse.UNKNOWN_COMMAND}
      *
+     * @param  type
+     *         The command type
      * @param  id
      *         The id of the command to edit
+     *
+     * @throws IllegalArgumentException
+     *         If the type is {@link Command.Type#UNKNOWN}
      *
      * @return {@link CommandEditAction} used to edit the command
      */
     @Nonnull
     @CheckReturnValue
-    default CommandEditAction editCommandById(long id)
+    default CommandEditAction editCommandById(@Nonnull Command.Type type, long id)
     {
-        return editCommandById(Long.toUnsignedString(id));
+        return editCommandById(type, Long.toUnsignedString(id));
     }
 
     /**
@@ -2277,4 +2285,15 @@ public interface JDA extends IGuildChannelContainer<Channel>
         else throw new IllegalStateException("No port available");
         return new CompletedRestAction<>(this, port);
     }
+
+    /**
+     * Returns the {@link ApplicationManager} that manages the application associated with the bot.
+     * <br>You modify multiple fields in one request by chaining setters before calling {@link net.dv8tion.jda.api.requests.RestAction#queue() RestAction.queue()}.
+     *
+     * @return The corresponding ApplicationManager
+     */
+    @Nonnull
+    @CheckReturnValue
+    ApplicationManager getApplicationManager();
+
 }

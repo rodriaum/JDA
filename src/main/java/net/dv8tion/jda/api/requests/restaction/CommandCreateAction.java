@@ -171,12 +171,6 @@ public interface CommandCreateAction extends RestAction<Command>, SlashCommandDa
 
     @Nonnull
     @Override
-    @Deprecated
-    @CheckReturnValue
-    CommandCreateAction setGuildOnly(boolean guildOnly);
-
-    @Nonnull
-    @Override
     @CheckReturnValue
     default CommandCreateAction setContexts(@Nonnull InteractionContextType... contexts)
     {

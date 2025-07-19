@@ -27,6 +27,8 @@ import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.channel.unions.DefaultGuildChannelUnion;
 import net.dv8tion.jda.api.entities.emoji.CustomEmoji;
 import net.dv8tion.jda.api.entities.emoji.RichCustomEmoji;
+import net.dv8tion.jda.api.entities.guild.SecurityIncidentActions;
+import net.dv8tion.jda.api.entities.guild.SecurityIncidentDetections;
 import net.dv8tion.jda.api.entities.sticker.GuildSticker;
 import net.dv8tion.jda.api.entities.sticker.StickerSnowflake;
 import net.dv8tion.jda.api.entities.templates.Template;
@@ -114,7 +116,7 @@ public class DetachedGuildImpl implements Guild, IDetachableEntityMixin
 
     @Nonnull
     @Override
-    public CommandEditAction editCommandById(@Nonnull String id)
+    public CommandEditAction editCommandById(@Nonnull Command.Type type, @Nonnull String id)
     {
         throw detachedException();
     }
@@ -399,6 +401,20 @@ public class DetachedGuildImpl implements Guild, IDetachableEntityMixin
         throw detachedException();
     }
 
+    @Nonnull
+    @Override
+    public SecurityIncidentActions getSecurityIncidentActions()
+    {
+        throw detachedException();
+    }
+
+    @Nonnull
+    @Override
+    public SecurityIncidentDetections getSecurityIncidentDetections()
+    {
+        throw detachedException();
+    }
+
     @Override
     public boolean isMember(@Nonnull UserSnowflake user)
     {
@@ -435,6 +451,13 @@ public class DetachedGuildImpl implements Guild, IDetachableEntityMixin
     @Nonnull
     @Override
     public SortedSnowflakeCacheView<ScheduledEvent> getScheduledEventCache()
+    {
+        throw detachedException();
+    }
+
+    @Nonnull
+    @Override
+    public RestAction<List<ScheduledEvent>> retrieveScheduledEvents(boolean includeUserCount)
     {
         throw detachedException();
     }
@@ -698,7 +721,7 @@ public class DetachedGuildImpl implements Guild, IDetachableEntityMixin
 
     @Nonnull
     @Override
-    public RestAction<GuildVoiceState> retrieveMemberVoiceStateById(long id)
+    public CacheRestAction<GuildVoiceState> retrieveMemberVoiceStateById(long id)
     {
         throw detachedException();
     }
@@ -810,7 +833,7 @@ public class DetachedGuildImpl implements Guild, IDetachableEntityMixin
 
     @Nonnull
     @Override
-    public RestAction<Void> moveVoiceMember(@Nonnull Member member, @Nullable AudioChannel audioChannel)
+    public RestAction<Void> moveVoiceMember(@Nonnull UserSnowflake user, @Nullable AudioChannel audioChannel)
     {
         throw detachedException();
     }
@@ -825,6 +848,13 @@ public class DetachedGuildImpl implements Guild, IDetachableEntityMixin
     @Nonnull
     @Override
     public AuditableRestAction<Integer> prune(int days, boolean wait, @Nonnull Role... roles)
+    {
+        throw detachedException();
+    }
+
+    @Nonnull
+    @Override
+    public AuditableRestAction<Void> modifySecurityIncidents(@Nonnull SecurityIncidentActions incidents)
     {
         throw detachedException();
     }

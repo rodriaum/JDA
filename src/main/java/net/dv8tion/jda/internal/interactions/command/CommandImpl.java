@@ -150,7 +150,7 @@ public class CommandImpl implements Command
     public CommandEditAction editCommand()
     {
         checkSelfUser("Cannot edit a command from another bot!");
-        return guild == null ? new CommandEditActionImpl(api, getId()) : new CommandEditActionImpl(guild, getId());
+        return guild == null ? new CommandEditActionImpl(api, type, getId()) : new CommandEditActionImpl(guild, type, getId());
     }
 
     @Nonnull
@@ -249,12 +249,6 @@ public class CommandImpl implements Command
     public DefaultMemberPermissions getDefaultPermissions()
     {
         return defaultMemberPermissions;
-    }
-
-    @Override
-    public boolean isGuildOnly()
-    {
-        return contexts.size() == 1 && contexts.contains(InteractionContextType.GUILD);
     }
 
     @Nonnull

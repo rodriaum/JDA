@@ -43,6 +43,7 @@ public class Route
     public static class Applications
     {
         public static final Route GET_BOT_APPLICATION =             new Route(GET, "oauth2/applications/@me");
+        public static final Route EDIT_BOT_APPLICATION =            new Route(PATCH, "applications/@me");
         public static final Route GET_ROLE_CONNECTION_METADATA =    new Route(GET, "applications/{application_id}/role-connections/metadata");
         public static final Route UPDATE_ROLE_CONNECTION_METADATA = new Route(PUT, "applications/{application_id}/role-connections/metadata");
         public static final Route GET_ENTITLEMENTS =                new Route(GET, "applications/{application_id}/entitlements");
@@ -148,8 +149,9 @@ public class Route
         public static final Route DELETE_SCHEDULED_EVENT    = new Route(DELETE, "guilds/{guild_id}/scheduled-events/{scheduled_event_id}");
         public static final Route GET_SCHEDULED_EVENT_USERS = new Route(GET,    "guilds/{guild_id}/scheduled-events/{scheduled_event_id}/users");
 
-        public static final Route GET_WELCOME_SCREEN    = new Route(GET,   "guilds/{guild_id}/welcome-screen");
-        public static final Route MODIFY_WELCOME_SCREEN = new Route(PATCH, "guilds/{guild_id}/welcome-screen");
+        public static final Route GET_WELCOME_SCREEN    =  new Route(GET,   "guilds/{guild_id}/welcome-screen");
+        public static final Route MODIFY_WELCOME_SCREEN =  new Route(PATCH, "guilds/{guild_id}/welcome-screen");
+        public static final Route MODIFY_GUILD_INCIDENTS = new Route(PUT,  "guilds/{guild_id}/incident-actions");
 
         public static final Route CREATE_GUILD = new Route(POST, "guilds");
         public static final Route DELETE_GUILD = new Route(POST, "guilds/{guild_id}/delete");
