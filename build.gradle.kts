@@ -119,7 +119,7 @@ idea {
 }
 
 // Use normal version string for new releases and commitHash for other builds
-if (projectEnvironment.canPublish) {
+if (projectEnvironment.canPublish || projectEnvironment.version.get().classifier != null) {
     project.version = projectEnvironment.version.get().toString()
 } else {
     project.version = "${projectEnvironment.version.get()}_${projectEnvironment.commitHash}"
