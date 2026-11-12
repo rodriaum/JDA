@@ -16,11 +16,8 @@
 
 package net.dv8tion.jda.api.components.textinput;
 
-import net.dv8tion.jda.annotations.ForRemoval;
-import net.dv8tion.jda.annotations.ReplaceWith;
-import net.dv8tion.jda.api.components.ActionComponent;
-import net.dv8tion.jda.api.components.actionrow.ActionRowChildComponent;
-import net.dv8tion.jda.api.interactions.modals.Modal;
+import net.dv8tion.jda.api.components.attribute.ICustomId;
+import net.dv8tion.jda.api.components.label.LabelChildComponent;
 import net.dv8tion.jda.internal.components.textinput.TextInputImpl;
 import net.dv8tion.jda.internal.utils.Checks;
 
@@ -30,10 +27,9 @@ import javax.annotation.Nullable;
 /**
  * Represents a Discord Text input component
  *
- * <p>Must be used in {@link Modal Modals}!
+ * <p>Must be used inside {@link net.dv8tion.jda.api.components.label.Label Labels} only!
  */
-public interface TextInput extends ActionComponent, ActionRowChildComponent
-{
+public interface TextInput extends ICustomId, LabelChildComponent {
     /**
      * The maximum length a TextInput value can have. ({@value})
      */
@@ -48,11 +44,6 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
      * The maximum length a TextInput placeholder can have. ({@value})
      */
     int MAX_PLACEHOLDER_LENGTH = 100;
-
-    /**
-     * The maximum length a TextInput label can have. ({@value})
-     */
-    int MAX_LABEL_LENGTH = 45;
 
     /**
      * The {@link TextInputStyle} of this TextInput component.
@@ -74,14 +65,6 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
     String getCustomId();
 
     /**
-     * The label of this TextInput component.
-     *
-     * @return The label of this TextInput component.
-     */
-    @Nonnull
-    String getLabel();
-
-    /**
      * The minimum amount of characters that must be written to submit the Modal.
      *
      * <p><b>This is -1 if no length has been set!</b>
@@ -100,7 +83,11 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
     int getMaxLength();
 
     /**
-     * Whether this TextInput is required to be non-empty
+     * Whether this TextInput is required to be non-empty.
+     *
+     * <p>This attribute is completely separate from the length range,
+     * for example, you can have an optional text input with the range set to {@code [2 ; 5]},
+     * meaning you accept either no input, or, at least 2 characters but at most 5.
      *
      * @return True if this TextInput is required to be used.
      */
@@ -128,41 +115,13 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
     @Nullable
     String getPlaceHolder();
 
-    @Override
-    default boolean isDisabled()
-    {
-        return false;
-    }
-
-    @Nonnull
-    @Override
-    default TextInput asDisabled()
-    {
-        return (TextInput) ActionComponent.super.asDisabled();
-    }
-
-    @Nonnull
-    @Override
-    default TextInput asEnabled()
-    {
-        return (TextInput) ActionComponent.super.asEnabled();
-    }
-
-    @Nonnull
-    @Override
-    default TextInput withDisabled(boolean disabled)
-    {
-        throw new UnsupportedOperationException("TextInputs cannot be disabled!");
-    }
-
     @Nonnull
     @Override
     TextInput withUniqueId(int uniqueId);
 
     @Nonnull
     @Override
-    default Type getType()
-    {
+    default Type getType() {
         return Type.TEXT_INPUT;
     }
 
@@ -171,35 +130,52 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
      *
      * @param  id
      *         The custom id
-     * @param  label
-     *         The label
      * @param  style
      *         The {@link TextInputStyle TextInputStyle}
      *
      * @throws IllegalArgumentException
      *         <ul>
-     *             <li>If either id or label are null or blank</li>
+     *             <li>If id is null or blank</li>
      *             <li>If style is null or {@link TextInputStyle#UNKNOWN UNKNOWN}</li>
      *             <li>If id is longer than {@value #MAX_ID_LENGTH} characters</li>
-     *             <li>If label is longer than {@value #MAX_LABEL_LENGTH} characters</li>
      *         </ul>
      *
-     * @return a new TextInput Builder.
+     * @return The new TextInput Builder.
      */
     @Nonnull
-    static TextInput.Builder create(@Nonnull String id, @Nonnull String label, @Nonnull TextInputStyle style)
-    {
-        return new Builder(id, label, style);
+    static TextInput.Builder create(@Nonnull String id, @Nonnull TextInputStyle style) {
+        return new Builder(id, style);
+    }
+
+    /**
+     * Creates a new TextInput.
+     * <br>This is a shortcut for {@code TextInput.create(id, style).build()}.
+     *
+     * @param  id
+     *         The custom id
+     * @param  style
+     *         The {@link TextInputStyle TextInputStyle}
+     *
+     * @throws IllegalArgumentException
+     *         <ul>
+     *             <li>If id is null or blank</li>
+     *             <li>If style is null or {@link TextInputStyle#UNKNOWN UNKNOWN}</li>
+     *             <li>If id is longer than {@value #MAX_ID_LENGTH} characters</li>
+     *         </ul>
+     *
+     * @return The new TextInput instance.
+     */
+    @Nonnull
+    static TextInput of(@Nonnull String id, @Nonnull TextInputStyle style) {
+        return TextInput.create(id, style).build();
     }
 
     /**
      * Builder for {@link TextInput TextInputs}
      */
-    class Builder
-    {
-        private String id;
+    class Builder {
+        private String customId;
         private int uniqueId = -1;
-        private String label;
         private String value;
         private String placeholder;
         private int minLength = -1;
@@ -207,34 +183,31 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
         private TextInputStyle style;
         private boolean required = true;
 
-        protected Builder(String id, String label, TextInputStyle style)
-        {
-            setId(id);
-            setLabel(label);
+        protected Builder(String customId, TextInputStyle style) {
+            setCustomId(customId);
             setStyle(style);
         }
 
         /**
-         * Sets the id for this TextInput
+         * Sets the custom ID for this TextInput
          * <br>This can be used to uniquely identify it, or pass data to other handlers.
          *
-         * @param  id
-         *         The id to set
+         * @param  customId
+         *         The custom ID to set
          *
          * @throws IllegalArgumentException
          *         <ul>
-         *             <li>If id is null or blank</li>
-         *             <li>If id is longer than {@value #MAX_ID_LENGTH} characters</li>
+         *             <li>If {@code customId} is null or blank</li>
+         *             <li>If {@code customId} is longer than {@value #MAX_ID_LENGTH} characters</li>
          *         </ul>
          *
          * @return The same Builder for chaining convenience.
          */
         @Nonnull
-        public Builder setId(@Nonnull String id)
-        {
-            Checks.notBlank(id, "ID");
-            Checks.notLonger(id, MAX_ID_LENGTH, "ID");
-            this.id = id;
+        public Builder setCustomId(@Nonnull String customId) {
+            Checks.notBlank(customId, "Custom ID");
+            Checks.notLonger(customId, MAX_ID_LENGTH, "Custom ID");
+            this.customId = customId;
             return this;
         }
 
@@ -251,33 +224,9 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The same Builder for chaining convenience.
          */
         @Nonnull
-        public Builder setUniqueId(int uniqueId)
-        {
+        public Builder setUniqueId(int uniqueId) {
             Checks.positive(uniqueId, "Unique ID");
             this.uniqueId = uniqueId;
-            return this;
-        }
-
-        /**
-         * Sets the label for this TextInput
-         *
-         * @param  label
-         *         The label to set
-         *
-         * @throws IllegalArgumentException
-         *         <ul>
-         *             <li>If label is null or blank</li>
-         *             <li>If label is longer than {@value #MAX_LABEL_LENGTH} characters</li>
-         *         </ul>
-         *
-         * @return The same Builder for chaining convenience.
-         */
-        @Nonnull
-        public Builder setLabel(@Nonnull String label)
-        {
-            Checks.notBlank(label, "Label");
-            Checks.notLonger(label, MAX_LABEL_LENGTH, "Label");
-            this.label = label;
             return this;
         }
 
@@ -298,8 +247,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The same Builder for chaining convenience.
          */
         @Nonnull
-        public Builder setStyle(@Nonnull TextInputStyle style)
-        {
+        public Builder setStyle(@Nonnull TextInputStyle style) {
             Checks.notNull(style, "Style");
             Checks.check(style != TextInputStyle.UNKNOWN, "TextInputStyle cannot be UNKNOWN!");
             this.style = style;
@@ -309,14 +257,17 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
         /**
          * Sets whether the user is required to write in this TextInput. Default is true.
          *
-         * @param  required 
+         * <p>This attribute is completely separate from the length range,
+         * for example, you can have an optional text input with the range set to {@code [2 ; 5]},
+         * meaning you accept either no input, or, at least 2 characters but at most 5.
+         *
+         * @param  required
          *         If this TextInput should be required
          *
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public Builder setRequired(boolean required)
-        {
+        public Builder setRequired(boolean required) {
             this.required = required;
             return this;
         }
@@ -335,12 +286,13 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public Builder setMinLength(int minLength)
-        {
-            if (minLength != -1)
-            {
+        public Builder setMinLength(int minLength) {
+            if (minLength != -1) {
                 Checks.notNegative(minLength, "Minimum length");
-                Checks.check(minLength <= MAX_VALUE_LENGTH, "Minimum length cannot be longer than %d characters!", MAX_VALUE_LENGTH);
+                Checks.check(
+                        minLength <= MAX_VALUE_LENGTH,
+                        "Minimum length cannot be longer than %d characters!",
+                        MAX_VALUE_LENGTH);
             }
 
             this.minLength = minLength;
@@ -352,7 +304,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          *
          * <p><b>This has to be between 1 and {@value #MAX_VALUE_LENGTH}, or -1 for no maximum length</b>
          *
-         * @param  maxLength 
+         * @param  maxLength
          *         The maximum amount of characters that need to be written, or -1
          *
          * @throws IllegalArgumentException
@@ -361,12 +313,13 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public Builder setMaxLength(int maxLength)
-        {
-            if (maxLength != -1)
-            {
+        public Builder setMaxLength(int maxLength) {
+            if (maxLength != -1) {
                 Checks.check(maxLength >= 1, "Maximum length cannot be smaller than 1 character!");
-                Checks.check(maxLength <= MAX_VALUE_LENGTH, "Maximum length cannot be longer than %d characters!", MAX_VALUE_LENGTH);
+                Checks.check(
+                        maxLength <= MAX_VALUE_LENGTH,
+                        "Maximum length cannot be longer than %d characters!",
+                        MAX_VALUE_LENGTH);
             }
 
             this.maxLength = maxLength;
@@ -376,11 +329,11 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
         /**
          * Sets the minimum and maximum required length on this TextInput component
          *
-         * @param  min 
+         * @param  min
          *         Minimum length of the text input, or -1 for none
-         * @param  max 
+         * @param  max
          *         Maximum length of the text input, or -1 for none
-
+         *
          * @throws IllegalArgumentException
          *         <ul>
          *             <li>If min is not -1 and is negative or greater than {@link #MAX_VALUE_LENGTH}</li>
@@ -390,10 +343,10 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public Builder setRequiredRange(int min, int max)
-        {
-            if (min != -1 && max != -1 && min > max)
+        public Builder setRequiredRange(int min, int max) {
+            if (min != -1 && max != -1 && min > max) {
                 throw new IllegalArgumentException("minimum cannot be greater than maximum!");
+            }
 
             setMinLength(min);
             setMaxLength(max);
@@ -404,16 +357,14 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * Sets a pre-populated text for this TextInput field.
          * <br>If this is not null, sending a Modal with this component will pre-populate the TextInput field with the specified String.
          *
-         * @param  value 
+         * @param  value
          *         Pre-Populated text
          *
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public Builder setValue(@Nullable String value)
-        {
-            if (value != null)
-            {
+        public Builder setValue(@Nullable String value) {
+            if (value != null) {
                 Checks.notLonger(value, MAX_VALUE_LENGTH, "Value");
                 Checks.notBlank(value, "Value");
             }
@@ -426,7 +377,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * Sets a placeholder for this TextInput field.
          * <br>This is a short hint that describes the expected value of the input field.
          *
-         * @param  placeholder 
+         * @param  placeholder
          *         The placeholder
          *
          * @throws IllegalArgumentException
@@ -435,10 +386,8 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public Builder setPlaceholder(@Nullable String placeholder)
-        {
-            if (placeholder != null)
-            {
+        public Builder setPlaceholder(@Nullable String placeholder) {
+            if (placeholder != null) {
                 Checks.notLonger(placeholder, MAX_PLACEHOLDER_LENGTH, "Placeholder");
                 Checks.notBlank(placeholder, "Placeholder");
             }
@@ -451,8 +400,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          *
          * @return Minimum length or -1
          */
-        public int getMinLength()
-        {
+        public int getMinLength() {
             return minLength;
         }
 
@@ -461,8 +409,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          *
          * @return Maximum length or -1
          */
-        public int getMaxLength()
-        {
+        public int getMaxLength() {
             return maxLength;
         }
 
@@ -470,28 +417,10 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * The custom id
          *
          * @return Custom id
-         *
-         * @deprecated
-         *         Replaced with {@link #getCustomId()}
          */
         @Nonnull
-        @Deprecated
-        @ForRemoval
-        @ReplaceWith("getCustomId()")
-        public String getId()
-        {
-            return id;
-        }
-
-        /**
-         * The custom id
-         *
-         * @return Custom id
-         */
-        @Nonnull
-        public String getCustomId()
-        {
-            return id;
+        public String getCustomId() {
+            return customId;
         }
 
         /**
@@ -499,20 +428,8 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          *
          * @return Unique ID
          */
-        public int getUniqueId()
-        {
+        public int getUniqueId() {
             return uniqueId;
-        }
-
-        /**
-         * The label shown above this text input box
-         *
-         * @return Label for the input
-         */
-        @Nonnull
-        public String getLabel()
-        {
-            return label;
         }
 
         /**
@@ -521,8 +438,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return The TextInputStyle
          */
         @Nonnull
-        public TextInputStyle getStyle()
-        {
+        public TextInputStyle getStyle() {
             return style;
         }
 
@@ -533,8 +449,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return Placeholder
          */
         @Nullable
-        public String getPlaceholder()
-        {
+        public String getPlaceholder() {
             return placeholder;
         }
 
@@ -544,8 +459,7 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return Value
          */
         @Nullable
-        public String getValue()
-        {
+        public String getValue() {
             return value;
         }
 
@@ -553,12 +467,15 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * Whether this TextInput is required.
          * <br>If this is True, the user must populate this TextInput field before they can submit the Modal.
          *
+         * <p>This attribute is completely separate from the length range,
+         * for example, you can have an optional text input with the range set to {@code [2 ; 5]},
+         * meaning you accept either no input, or, at least 2 characters but at most 5.
+         *
          * @return True if this TextInput is required
-         * 
+         *
          * @see    TextInput#isRequired()
          */
-        public boolean isRequired()
-        {
+        public boolean isRequired() {
             return required;
         }
 
@@ -571,12 +488,12 @@ public interface TextInput extends ActionComponent, ActionRowChildComponent
          * @return the TextInput instance
          */
         @Nonnull
-        public TextInput build()
-        {
-            if (maxLength < minLength && maxLength != -1)
+        public TextInput build() {
+            if (maxLength < minLength && maxLength != -1) {
                 throw new IllegalStateException("maxLength cannot be smaller than minLength!");
+            }
 
-            return new TextInputImpl(id, uniqueId, style, label, minLength, maxLength, required, value, placeholder);
+            return new TextInputImpl(customId, uniqueId, style, minLength, maxLength, required, value, placeholder);
         }
     }
 }

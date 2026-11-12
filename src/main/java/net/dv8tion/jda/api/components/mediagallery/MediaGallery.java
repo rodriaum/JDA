@@ -25,10 +25,11 @@ import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.Helpers;
 import org.jetbrains.annotations.Unmodifiable;
 
-import javax.annotation.CheckReturnValue;
-import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.List;
+
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 
 /**
  * Component which displays a group of images, videos, GIFs or WEBPs into a gallery grid.
@@ -37,8 +38,7 @@ import java.util.List;
  *
  * <p><b>Requirements:</b> {@linkplain MessageRequest#useComponentsV2() Components V2} needs to be enabled!
  */
-public interface MediaGallery extends Component, MessageTopLevelComponent, ContainerChildComponent
-{
+public interface MediaGallery extends Component, MessageTopLevelComponent, ContainerChildComponent {
     /**
      * How many {@link MediaGalleryItem} can be in a media gallery. ({@value})
      */
@@ -59,9 +59,8 @@ public interface MediaGallery extends Component, MessageTopLevelComponent, Conta
      * @return The new {@link MediaGallery}
      */
     @Nonnull
-    static MediaGallery of(@Nonnull Collection<? extends MediaGalleryItem> items)
-    {
-        return MediaGalleryImpl.of(items);
+    static MediaGallery of(@Nonnull Collection<? extends MediaGalleryItem> items) {
+        return MediaGalleryImpl.validated(items);
     }
 
     /**
@@ -81,8 +80,7 @@ public interface MediaGallery extends Component, MessageTopLevelComponent, Conta
      * @return The new {@link MediaGallery}
      */
     @Nonnull
-    static MediaGallery of(@Nonnull MediaGalleryItem item, @Nonnull MediaGalleryItem... items)
-    {
+    static MediaGallery of(@Nonnull MediaGalleryItem item, @Nonnull MediaGalleryItem... items) {
         Checks.notNull(item, "Item");
         Checks.noneNull(items, "Items");
         return of(Helpers.mergeVararg(item, items));
@@ -92,6 +90,42 @@ public interface MediaGallery extends Component, MessageTopLevelComponent, Conta
     @Override
     @CheckReturnValue
     MediaGallery withUniqueId(int uniqueId);
+
+    /**
+     * Creates a new {@link MediaGallery} with the specified items.
+     *
+     * @param  items
+     *         The new items
+     *
+     * @throws IllegalArgumentException
+     *         If the provided items are {@code null} or contains {@code null}
+     *
+     * @return The new {@link MediaGallery}
+     */
+    @Nonnull
+    @CheckReturnValue
+    MediaGallery withItems(@Nonnull Collection<? extends MediaGalleryItem> items);
+
+    /**
+     * Creates a new {@link MediaGallery} with the specified items.
+     *
+     * @param  item
+     *         The first new items
+     * @param  items
+     *         Additional new items
+     *
+     * @throws IllegalArgumentException
+     *         If the provided items are {@code null} or contains {@code null}
+     *
+     * @return The new {@link MediaGallery}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default MediaGallery withItems(@Nonnull MediaGalleryItem item, @Nonnull MediaGalleryItem... items) {
+        Checks.notNull(item, "Item");
+        Checks.notNull(items, "Items");
+        return withItems(Helpers.mergeVararg(item, items));
+    }
 
     /**
      * Returns an immutable list with the items contained by this media gallery.

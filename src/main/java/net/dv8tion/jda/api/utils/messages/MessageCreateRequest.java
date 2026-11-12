@@ -19,7 +19,6 @@ package net.dv8tion.jda.api.utils.messages;
 import net.dv8tion.jda.api.components.Component;
 import net.dv8tion.jda.api.components.MessageTopLevelComponent;
 import net.dv8tion.jda.api.components.tree.ComponentTree;
-import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.requests.RestAction;
@@ -27,13 +26,13 @@ import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.internal.utils.Checks;
 import okhttp3.MediaType;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * Specialized abstraction of setters and accumulators for creating messages throughout the API.
@@ -45,17 +44,16 @@ import java.util.stream.Collectors;
  * @see   MessageCreateData
  * @see   net.dv8tion.jda.api.requests.restaction.MessageCreateAction MessageCreateAction
  */
-public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends MessageRequest<R>
-{
+public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends MessageRequest<R> {
     /**
      * Appends the content to the currently set content of this request.
      * <br>Use {@link #setContent(String)} instead, to replace the content entirely.
      *
      * <p><b>Example</b><br>
      * Sending a message with the content {@code "Hello World!"}:
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessage("Hello ").addContent("World!").queue();
-     * }</pre>
+     * }
      *
      * @param  content
      *         The content to append
@@ -74,9 +72,9 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      *
      * <p><b>Example</b><br>
      * Sending a message with multiple embeds:
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessageEmbeds(embed1).addEmbeds(embed2).queue();
-     * }</pre>
+     * }
      *
      * @param  embeds
      *         The embeds to add
@@ -95,9 +93,9 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      *
      * <p><b>Example</b><br>
      * Sending a message with multiple embeds:
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessageEmbeds(embed1).addEmbeds(embed2).queue();
-     * }</pre>
+     * }
      *
      * @param  embeds
      *         The embeds to add
@@ -108,8 +106,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      * @return The same instance for chaining
      */
     @Nonnull
-    default R addEmbeds(@Nonnull MessageEmbed... embeds)
-    {
+    default R addEmbeds(@Nonnull MessageEmbed... embeds) {
         return addEmbeds(Arrays.asList(embeds));
     }
 
@@ -119,7 +116,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      *
      * <p><b>Example</b><br>
      * Sending a message with multiple action rows:
-     * <pre>{@code
+     * {@snippet lang="java":
      * final List<MessageTopLevelComponent> list = new ArrayList<>();
      * list.add(ActionRow.of(selectMenu); // first row
      * list.add(ActionRow.of(button1, button2)); // second row (shows below the first)
@@ -127,7 +124,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      * channel.sendMessage("Content here")
      *        .addComponents(list)
      *        .queue();
-     * }</pre>
+     * }
      *
      * @param  components
      *         The {@link MessageTopLevelComponent MessageTopLevelComponents} to add,
@@ -152,11 +149,11 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      *
      * <p><b>Example</b><br>
      * Sending a message with multiple action rows:
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessageComponents(ActionRow.of(selectMenu))
      *        .addComponents(ActionRow.of(button1, button2))
      *        .queue();
-     * }</pre>
+     * }
      *
      * @param  components
      *         The {@link MessageTopLevelComponent MessageTopLevelComponents} to add,
@@ -173,8 +170,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      * @return The same instance for chaining
      */
     @Nonnull
-    default R addComponents(@Nonnull MessageTopLevelComponent... components)
-    {
+    default R addComponents(@Nonnull MessageTopLevelComponent... components) {
         return addComponents(Arrays.asList(components));
     }
 
@@ -199,8 +195,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      * @see    net.dv8tion.jda.api.components.tree.MessageComponentTree MessageComponentTree
      */
     @Nonnull
-    default R addComponents(@Nonnull ComponentTree<? extends MessageTopLevelComponent> tree)
-    {
+    default R addComponents(@Nonnull ComponentTree<? extends MessageTopLevelComponent> tree) {
         return addComponents(tree.getComponents());
     }
 
@@ -215,9 +210,9 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      *
      * <p><b>Example</b><br>
      * Sending a message with multiple files:
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendFiles(file1).addFiles(file2).queue();
-     * }</pre>
+     * }
      *
      * @param  files
      *         The files to add
@@ -241,9 +236,9 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      *
      * <p><b>Example</b><br>
      * Sending a message with multiple files:
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendFiles(file1).addFiles(file2).queue();
-     * }</pre>
+     * }
      *
      * @param  files
      *         The files to add
@@ -254,8 +249,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      * @return The same instance for chaining
      */
     @Nonnull
-    default R addFiles(@Nonnull FileUpload... files)
-    {
+    default R addFiles(@Nonnull FileUpload... files) {
         return addFiles(Arrays.asList(files));
     }
 
@@ -334,8 +328,7 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      * @return The same instance for chaining
      */
     @Nonnull
-    default R applyData(@Nonnull MessageCreateData data)
-    {
+    default R applyData(@Nonnull MessageCreateData data) {
         Checks.notNull(data, "MessageCreateData");
 
         return setContent(data.getContent())
@@ -354,19 +347,11 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
                 .setFiles(data.getFiles());
     }
 
+    @Override
     @Nonnull
-    default R applyMessage(@Nonnull Message message)
-    {
-        Checks.notNull(message, "Message");
-        Checks.check(!message.getType().isSystem(), "Cannot copy a system message");
-        List<MessageEmbed> embeds = message.getEmbeds()
-                .stream()
-                .filter(e -> e.getType() == EmbedType.RICH)
-                .collect(Collectors.toList());
-        return setContent(message.getContentRaw())
-                .setEmbeds(embeds)
-                .setComponents(message.getComponents())
-                .useComponentsV2(message.isUsingComponentsV2())
+    default R applyMessage(@Nonnull Message message) {
+        return MessageRequest.super
+                .applyMessage(message)
                 .setTTS(message.isTTS())
                 .setSuppressedNotifications(message.isSuppressedNotifications())
                 .setVoiceMessage(message.isVoiceMessage())
@@ -391,22 +376,22 @@ public interface MessageCreateRequest<R extends MessageCreateRequest<R>> extends
      */
     @Nonnull
     @SuppressWarnings({"unchecked", "ResultOfMethodCallIgnored"})
-    default R applyEditData(@Nonnull MessageEditData data)
-    {
+    default R applyEditData(@Nonnull MessageEditData data) {
         Checks.notNull(data, "MessageEditData");
-        if (data.isSet(MessageEditBuilder.CONTENT))
+        if (data.isSet(MessageEditBuilder.CONTENT)) {
             setContent(data.getContent());
-        if (data.isSet(MessageEditBuilder.EMBEDS))
+        }
+        if (data.isSet(MessageEditBuilder.EMBEDS)) {
             setEmbeds(data.getEmbeds());
-        if (data.isSet(MessageEditBuilder.COMPONENTS))
-        {
+        }
+        if (data.isSet(MessageEditBuilder.COMPONENTS)) {
             setComponents(data.getComponents());
             useComponentsV2(data.isUsingComponentsV2());
         }
-        if (data.isSet(MessageEditBuilder.ATTACHMENTS))
+        if (data.isSet(MessageEditBuilder.ATTACHMENTS)) {
             setFiles(data.getFiles());
-        if (data.isSet(MessageEditBuilder.MENTIONS))
-        {
+        }
+        if (data.isSet(MessageEditBuilder.MENTIONS)) {
             setAllowedMentions(data.getAllowedMentions());
             mentionUsers(data.getMentionedUsers());
             mentionRoles(data.getMentionedRoles());

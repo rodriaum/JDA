@@ -19,15 +19,18 @@ package net.dv8tion.jda.api.interactions.modals;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.channel.unions.GuildMessageChannelUnion;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
+import net.dv8tion.jda.api.interactions.ICustomIdInteraction;
 import net.dv8tion.jda.api.interactions.callbacks.IMessageEditCallback;
 import net.dv8tion.jda.api.interactions.callbacks.IReplyCallback;
 import net.dv8tion.jda.api.interactions.components.ComponentInteraction;
+import net.dv8tion.jda.api.modals.Modal;
 import net.dv8tion.jda.internal.utils.Checks;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.util.List;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * Interaction on a {@link Modal}
@@ -37,13 +40,19 @@ import java.util.List;
  *
  * @see    net.dv8tion.jda.api.events.interaction.ModalInteractionEvent
  */
-public interface ModalInteraction extends IReplyCallback, IMessageEditCallback
-{
+public interface ModalInteraction extends IReplyCallback, IMessageEditCallback, ICustomIdInteraction {
+
+    @Override
+    @Nonnull
+    default String getCustomId() {
+        return getModalId();
+    }
+
     /**
      * Returns the custom id of the Modal in question
      *
      * @return Custom id
-     * 
+     *
      * @see    Modal.Builder#setId(String)
      */
     @Nonnull
@@ -76,12 +85,12 @@ public interface ModalInteraction extends IReplyCallback, IMessageEditCallback
      * @see    #getValues()
      */
     @Nullable
-    default ModalMapping getValue(@Nonnull String customId)
-    {
+    default ModalMapping getValue(@Nonnull String customId) {
         Checks.notNull(customId, "ID");
         return getValues().stream()
                 .filter(mapping -> mapping.getCustomId().equals(customId))
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -100,11 +109,11 @@ public interface ModalInteraction extends IReplyCallback, IMessageEditCallback
      * @see    #getValues()
      */
     @Nullable
-    default ModalMapping getValueByUniqueId(int id)
-    {
+    default ModalMapping getValueByUniqueId(int id) {
         return getValues().stream()
                 .filter(mapping -> mapping.getUniqueId() == id)
-                .findFirst().orElse(null);
+                .findFirst()
+                .orElse(null);
     }
 
     /**
@@ -121,8 +130,7 @@ public interface ModalInteraction extends IReplyCallback, IMessageEditCallback
 
     @Nonnull
     @Override
-    default GuildMessageChannelUnion getGuildChannel()
-    {
+    default GuildMessageChannelUnion getGuildChannel() {
         return (GuildMessageChannelUnion) IReplyCallback.super.getGuildChannel();
     }
 }

@@ -13,11 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.dv8tion.jda.api.entities.channel.concrete;
 
 import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
 import net.dv8tion.jda.api.requests.RestAction;
+import net.dv8tion.jda.internal.utils.Helpers;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -31,8 +34,7 @@ import javax.annotation.Nullable;
  *
  * @see User#openPrivateChannel()
  */
-public interface PrivateChannel extends MessageChannel
-{
+public interface PrivateChannel extends MessageChannel {
     /**
      * The {@link net.dv8tion.jda.api.entities.User User} that this {@link PrivateChannel PrivateChannel} communicates with.
      *
@@ -85,4 +87,10 @@ public interface PrivateChannel extends MessageChannel
     @Nonnull
     @Override
     String getName();
+
+    @Override
+    @Nonnull
+    default String getJumpUrl() {
+        return Helpers.format(GuildChannel.JUMP_URL, "@me", getId());
+    }
 }

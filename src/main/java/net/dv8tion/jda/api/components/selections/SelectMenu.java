@@ -16,18 +16,18 @@
 
 package net.dv8tion.jda.api.components.selections;
 
-import net.dv8tion.jda.annotations.ForRemoval;
-import net.dv8tion.jda.annotations.ReplaceWith;
 import net.dv8tion.jda.api.components.ActionComponent;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.actionrow.ActionRowChildComponent;
+import net.dv8tion.jda.api.components.label.LabelChildComponent;
 import net.dv8tion.jda.api.interactions.components.selections.SelectMenuInteraction;
 import net.dv8tion.jda.internal.utils.Checks;
+
+import java.util.Collection;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.Collection;
 
 /**
  * Represents a select menu in a message.
@@ -45,8 +45,7 @@ import java.util.Collection;
  * @see EntitySelectMenu
  * @see SelectMenuInteraction
  */
-public interface SelectMenu extends ActionComponent, ActionRowChildComponent
-{
+public interface SelectMenu extends ActionComponent, ActionRowChildComponent, LabelChildComponent {
     /**
      * The maximum length a select menu id can have
      */
@@ -68,15 +67,13 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
 
     @Nonnull
     @Override
-    default SelectMenu asDisabled()
-    {
+    default SelectMenu asDisabled() {
         return (SelectMenu) ActionComponent.super.asDisabled();
     }
 
     @Nonnull
     @Override
-    default SelectMenu asEnabled()
-    {
+    default SelectMenu asEnabled() {
         return (SelectMenu) ActionComponent.super.asEnabled();
     }
 
@@ -111,6 +108,18 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
     int getMaxValues();
 
     /**
+     * Whether the user must populate this select menu in Modals, or {@code null} if not set.
+     *
+     * <p>This attribute is completely separate from the value range,
+     * for example, you can have an optional select menu with the range set to {@code [2 ; 5]},
+     * meaning you accept either 0 options, or, at least 2 but at most 5.
+     *
+     * @return Whether this menu must be populated, or null
+     */
+    @Nullable
+    Boolean isRequired();
+
+    /**
      * Creates a new preconfigured {@link SelectMenu.Builder} with the same settings used for this select menu.
      * <br>This can be useful to create an updated version of this menu without needing to rebuild it from scratch.
      *
@@ -129,16 +138,15 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
      *        The builder type (used for fluent interface)
      */
     @SuppressWarnings("unchecked")
-    abstract class Builder<T extends SelectMenu, B extends Builder<T, B>>
-    {
+    abstract class Builder<T extends SelectMenu, B extends Builder<T, B>> {
         protected String customId;
         protected int uniqueId = -1;
         protected String placeholder;
         protected int minValues = 1, maxValues = 1;
         protected boolean disabled = false;
+        protected Boolean required = null;
 
-        protected Builder(@Nonnull String customId)
-        {
+        protected Builder(@Nonnull String customId) {
             setCustomId(customId);
         }
 
@@ -152,32 +160,9 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          *         If the provided id is null, empty, or longer than {@value #ID_MAX_LENGTH} characters
          *
          * @return The same builder instance for chaining
-         *
-         * @deprecated
-         *         Replaced with {@link #setCustomId(String)}
          */
         @Nonnull
-        @Deprecated
-        @ReplaceWith("setCustomId(customId)")
-        public B setId(@Nonnull String customId)
-        {
-            return setCustomId(customId);
-        }
-
-        /**
-         * Change the custom id used to identify the select menu.
-         *
-         * @param  customId
-         *         The new custom id to use
-         *
-         * @throws IllegalArgumentException
-         *         If the provided id is null, empty, or longer than {@value #ID_MAX_LENGTH} characters
-         *
-         * @return The same builder instance for chaining
-         */
-        @Nonnull
-        public B setCustomId(@Nonnull String customId)
-        {
+        public B setCustomId(@Nonnull String customId) {
             Checks.notEmpty(customId, "Component ID");
             Checks.notLonger(customId, ID_MAX_LENGTH, "Component ID");
             this.customId = customId;
@@ -196,8 +181,7 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public B setUniqueId(int uniqueId)
-        {
+        public B setUniqueId(int uniqueId) {
             Checks.positive(uniqueId, "Unique ID");
             this.uniqueId = uniqueId;
             return (B) this;
@@ -215,10 +199,8 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public B setPlaceholder(@Nullable String placeholder)
-        {
-            if (placeholder != null)
-            {
+        public B setPlaceholder(@Nullable String placeholder) {
+            if (placeholder != null) {
                 Checks.notEmpty(placeholder, "Placeholder");
                 Checks.notLonger(placeholder, PLACEHOLDER_MAX_LENGTH, "Placeholder");
             }
@@ -232,6 +214,9 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          *
          * <p>The minimum must not exceed the amount of available options.
          *
+         * <p><b>Note:</b> In modals, if you set this to zero,
+         * you must set this select menu as {@linkplain #setRequired(Boolean) optional}.
+         *
          * @param  minValues
          *         The min values
          *
@@ -241,10 +226,13 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public B setMinValues(int minValues)
-        {
+        public B setMinValues(int minValues) {
             Checks.notNegative(minValues, "Min Values");
-            Checks.check(minValues <= OPTIONS_MAX_AMOUNT, "Min Values may not be greater than %d! Provided: %d", OPTIONS_MAX_AMOUNT, minValues);
+            Checks.check(
+                    minValues <= OPTIONS_MAX_AMOUNT,
+                    "Min Values may not be greater than %d! Provided: %d",
+                    OPTIONS_MAX_AMOUNT,
+                    minValues);
             this.minValues = minValues;
             return (B) this;
         }
@@ -264,10 +252,13 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public B setMaxValues(int maxValues)
-        {
+        public B setMaxValues(int maxValues) {
             Checks.positive(maxValues, "Max Values");
-            Checks.check(maxValues <= OPTIONS_MAX_AMOUNT, "Max Values may not be greater than %d! Provided: %d", OPTIONS_MAX_AMOUNT, maxValues);
+            Checks.check(
+                    maxValues <= OPTIONS_MAX_AMOUNT,
+                    "Max Values may not be greater than %d! Provided: %d",
+                    OPTIONS_MAX_AMOUNT,
+                    maxValues);
             this.maxValues = maxValues;
             return (B) this;
         }
@@ -277,6 +268,9 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * <br>Default: {@code 1} for both
          *
          * <p>The minimum or maximum must not exceed the amount of available options.
+         *
+         * <p><b>Note:</b> In modals, if you set the minimum to zero,
+         * you must set this select menu as {@linkplain #setRequired(Boolean) optional}.
          *
          * @param  min
          *         The min values
@@ -289,9 +283,9 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public B setRequiredRange(int min, int max)
-        {
-            Checks.check(min <= max, "Min Values should be less than or equal to Max Values! Provided: [%d, %d]", min, max);
+        public B setRequiredRange(int min, int max) {
+            Checks.check(
+                    min <= max, "Min Values should be less than or equal to Max Values! Provided: [%d, %d]", min, max);
             return setMinValues(min).setMaxValues(max);
         }
 
@@ -305,9 +299,29 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The same builder instance for chaining
          */
         @Nonnull
-        public B setDisabled(boolean disabled)
-        {
+        public B setDisabled(boolean disabled) {
             this.disabled = disabled;
+            return (B) this;
+        }
+
+        /**
+         * Configure whether the user must populate this select menu if inside a Modal.
+         * <br>This defaults to {@code true} in Modals when unset.
+         *
+         * <p>This attribute is completely separate from the value range,
+         * for example, you can have an optional select menu with the range set to {@code [2 ; 5]},
+         * meaning you accept either 0 options, or, at least 2 but at most 5.
+         *
+         * <p>This only has an effect in Modals!
+         *
+         * @param required
+         *        Whether this menu is required
+         *
+         * @return The same builder instance for chaining
+         */
+        @Nonnull
+        public B setRequired(@Nullable Boolean required) {
+            this.required = required;
             return (B) this;
         }
 
@@ -315,27 +329,9 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * The custom id used to identify the select menu.
          *
          * @return The custom id
-         *
-         * @deprecated
-         *         Replaced with {@link #getCustomId()}
          */
         @Nonnull
-        @Deprecated
-        @ForRemoval
-        @ReplaceWith("getCustomId()")
-        public String getId()
-        {
-            return customId;
-        }
-
-        /**
-         * The custom id used to identify the select menu.
-         *
-         * @return The custom id
-         */
-        @Nonnull
-        public String getCustomId()
-        {
+        public String getCustomId() {
             return customId;
         }
 
@@ -344,8 +340,7 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          *
          * @return The numeric id
          */
-        public int getUniqueId()
-        {
+        public int getUniqueId() {
             return uniqueId;
         }
 
@@ -355,8 +350,7 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          * @return The placeholder or null
          */
         @Nullable
-        public String getPlaceholder()
-        {
+        public String getPlaceholder() {
             return placeholder;
         }
 
@@ -365,8 +359,7 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          *
          * @return The min values
          */
-        public int getMinValues()
-        {
+        public int getMinValues() {
             return minValues;
         }
 
@@ -375,8 +368,7 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          *
          * @return The max values
          */
-        public int getMaxValues()
-        {
+        public int getMaxValues() {
             return maxValues;
         }
 
@@ -385,16 +377,32 @@ public interface SelectMenu extends ActionComponent, ActionRowChildComponent
          *
          * @return True if this menu is disabled
          */
-        public boolean isDisabled()
-        {
+        public boolean isDisabled() {
             return disabled;
+        }
+
+        /**
+         * Whether the user must populate this select menu in Modals, or {@code null} if not set.
+         *
+         * <p>This attribute is completely separate from the value range,
+         * for example, you can have an optional select menu with the range set to {@code [2 ; 5]},
+         * meaning you accept either 0 options, or, at least 2 but at most 5.
+         *
+         * @return Whether this menu must be populated, or null
+         */
+        @Nullable
+        public Boolean isRequired() {
+            return required;
         }
 
         /**
          * Creates a new {@link SelectMenu} instance if all requirements are satisfied.
          *
          * @throws IllegalArgumentException
-         *         Throws if {@link #getMinValues()} is greater than {@link #getMaxValues()}
+         *         <ul>
+         *             <li>If {@link #getMinValues()} is greater than {@link #getMaxValues()}</li>
+         *             <li>If the minimum value range is 0 and a selection is also explicitly required</li>
+         *         </ul>
          *
          * @return The new {@link SelectMenu} instance
          */

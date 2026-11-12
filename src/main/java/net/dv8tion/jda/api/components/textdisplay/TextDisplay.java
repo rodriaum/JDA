@@ -16,8 +16,11 @@
 
 package net.dv8tion.jda.api.components.textdisplay;
 
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 import net.dv8tion.jda.api.components.Component;
 import net.dv8tion.jda.api.components.MessageTopLevelComponent;
+import net.dv8tion.jda.api.components.ModalTopLevelComponent;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.section.SectionContentComponent;
 import net.dv8tion.jda.api.entities.Message;
@@ -37,8 +40,12 @@ import javax.annotation.Nonnull;
  *
  * <p><b>Requirements:</b> {@linkplain MessageRequest#useComponentsV2() Components V2} needs to be enabled!
  */
-public interface TextDisplay extends Component, MessageTopLevelComponent, ContainerChildComponent, SectionContentComponent
-{
+public interface TextDisplay
+        extends Component,
+                MessageTopLevelComponent,
+                ModalTopLevelComponent,
+                ContainerChildComponent,
+                SectionContentComponent {
     /**
      * Constructs a new {@link TextDisplay} from the given content.
      *
@@ -51,8 +58,7 @@ public interface TextDisplay extends Component, MessageTopLevelComponent, Contai
      * @return The new {@link TextDisplay}
      */
     @Nonnull
-    static TextDisplay of(@Nonnull String content)
-    {
+    static TextDisplay of(@Nonnull String content) {
         Checks.notBlank(content, "Content");
         return new TextDisplayImpl(content);
     }
@@ -80,8 +86,8 @@ public interface TextDisplay extends Component, MessageTopLevelComponent, Contai
      * @return The new {@link TextDisplay}
      */
     @Nonnull
-    static TextDisplay ofFormat(@Nonnull String format, @Nonnull Object... args)
-    {
+    @FormatMethod
+    static TextDisplay ofFormat(@Nonnull @FormatString String format, @Nonnull Object... args) {
         Checks.notNull(format, "Format string");
         Checks.notNull(args, "Format args"); // Null array elements are allowed
         return of(String.format(format, args));

@@ -16,15 +16,11 @@
 
 package net.dv8tion.jda.api.components;
 
-import net.dv8tion.jda.annotations.ForRemoval;
-import net.dv8tion.jda.annotations.ReplaceWith;
-import net.dv8tion.jda.api.components.actionrow.ActionRow;
 import net.dv8tion.jda.api.components.actionrow.ActionRowChildComponent;
 import net.dv8tion.jda.api.components.container.ContainerChildComponent;
 import net.dv8tion.jda.api.components.section.SectionAccessoryComponent;
 import net.dv8tion.jda.api.components.section.SectionContentComponent;
-import net.dv8tion.jda.api.interactions.modals.Modal;
-import net.dv8tion.jda.api.interactions.modals.ModalTopLevelComponent;
+import net.dv8tion.jda.api.modals.Modal;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
@@ -48,8 +44,7 @@ import javax.annotation.Nonnull;
  * @see SectionContentComponent
  * @see SectionAccessoryComponent
  */
-public interface Component
-{
+public interface Component {
     /**
      * The type of component.
      *
@@ -92,8 +87,7 @@ public interface Component
      *
      * @return True, if this Component (and its children) is compatible with messages.
      */
-    default boolean isMessageCompatible()
-    {
+    default boolean isMessageCompatible() {
         return getType().isMessageCompatible();
     }
 
@@ -103,66 +97,53 @@ public interface Component
      *
      * @return True, if this Component (and its children) is compatible with modals.
      */
-    default boolean isModalCompatible()
-    {
+    default boolean isModalCompatible() {
         return getType().isModalCompatible();
     }
 
     /**
      * The component types
      */
-    enum Type
-    {
+    enum Type {
         UNKNOWN(-1, false, false),
         /** A row of components */
-        ACTION_ROW(1, true, true),
+        ACTION_ROW(1, true, false),
         /** A button */
         BUTTON(2, true, false),
         /** A select menu of strings */
-        STRING_SELECT(3, true, false),
+        STRING_SELECT(3, true, true),
         /** A text input field */
         TEXT_INPUT(4, false, true),
         /** A select menu of users */
-        USER_SELECT(5, true, false),
+        USER_SELECT(5, true, true),
         /** A select menu of roles */
-        ROLE_SELECT(6, true, false),
+        ROLE_SELECT(6, true, true),
         /** A select menu of users and roles */
-        MENTIONABLE_SELECT(7, true, false),
+        MENTIONABLE_SELECT(7, true, true),
         /** A select menu of channels */
-        CHANNEL_SELECT(8, true, false),
+        CHANNEL_SELECT(8, true, true),
         SECTION(9, true, false),
-        TEXT_DISPLAY(10, true, false),
+        TEXT_DISPLAY(10, true, true),
         THUMBNAIL(11, true, false),
         MEDIA_GALLERY(12, true, false),
         FILE_DISPLAY(13, true, false),
         SEPARATOR(14, true, false),
         CONTAINER(17, true, false),
+        LABEL(18, false, true),
+        FILE_UPLOAD(19, false, true),
+        RADIO_GROUP(21, false, true),
+        CHECKBOX_GROUP(22, false, true),
+        CHECKBOX(23, false, true),
         ;
 
         private final int key;
         private final boolean messageCompatible;
         private final boolean modalCompatible;
 
-        Type(int key, boolean messageCompatible, boolean modalCompatible)
-        {
+        Type(int key, boolean messageCompatible, boolean modalCompatible) {
             this.key = key;
             this.messageCompatible = messageCompatible;
             this.modalCompatible = modalCompatible;
-        }
-
-        /**
-         * How many components of this type can be added to one {@link ActionRow}.
-         *
-         * @return The maximum amount an action row can contain
-         *
-         * @deprecated Replaced with {@link ActionRow#getMaxAllowed(Component.Type)}
-         */
-        @Deprecated
-        @ForRemoval
-        @ReplaceWith("ActionRow.getMaxAllowed(Component.Type)")
-        public int getMaxPerRow()
-        {
-            return ActionRow.getMaxAllowed(this);
         }
 
         /**
@@ -172,8 +153,7 @@ public interface Component
          *
          * @return Raw int representing this ComponentType
          */
-        public int getKey()
-        {
+        public int getKey() {
             return key;
         }
 
@@ -182,8 +162,7 @@ public interface Component
          *
          * @return Whether this component can be used in Messages.
          */
-        public boolean isMessageCompatible()
-        {
+        public boolean isMessageCompatible() {
             return messageCompatible;
         }
 
@@ -192,9 +171,17 @@ public interface Component
          *
          * @return Whether this component can be used in Modals.
          */
-        public boolean isModalCompatible()
-        {
+        public boolean isModalCompatible() {
             return modalCompatible;
+        }
+
+        /**
+         * Whether this component is an {@link net.dv8tion.jda.api.components.selections.EntitySelectMenu EntitySelectMenu}
+         *
+         * @return {@code true} is this is a type of {@link net.dv8tion.jda.api.components.selections.EntitySelectMenu EntitySelectMenu}
+         */
+        public boolean isEntitySelectMenu() {
+            return this == MENTIONABLE_SELECT || this == CHANNEL_SELECT || this == USER_SELECT || this == ROLE_SELECT;
         }
 
         /**
@@ -206,12 +193,11 @@ public interface Component
          * @return The Type or {@link #UNKNOWN}
          */
         @Nonnull
-        public static Type fromKey(int type)
-        {
-            for (Type t : values())
-            {
-                if (t.key == type)
+        public static Type fromKey(int type) {
+            for (Type t : values()) {
+                if (t.key == type) {
                     return t;
+                }
             }
             return UNKNOWN;
         }

@@ -17,49 +17,68 @@
 package net.dv8tion.jda.internal.components;
 
 import net.dv8tion.jda.api.components.MessageTopLevelComponentUnion;
+import net.dv8tion.jda.api.components.ModalTopLevelComponentUnion;
 import net.dv8tion.jda.api.components.UnknownComponent;
 import net.dv8tion.jda.api.components.actionrow.ActionRowChildComponentUnion;
 import net.dv8tion.jda.api.components.container.ContainerChildComponentUnion;
 import net.dv8tion.jda.api.components.section.SectionAccessoryComponentUnion;
 import net.dv8tion.jda.api.components.section.SectionContentComponentUnion;
-import net.dv8tion.jda.api.interactions.modals.ModalTopLevelComponentUnion;
 import net.dv8tion.jda.api.utils.data.DataObject;
+
+import java.util.Objects;
 
 import javax.annotation.Nonnull;
 
-public class UnknownComponentImpl extends AbstractComponentImpl implements
-        UnknownComponent,
-        MessageTopLevelComponentUnion,
-        ModalTopLevelComponentUnion,
-        ActionRowChildComponentUnion,
-        SectionContentComponentUnion,
-        SectionAccessoryComponentUnion,
-        ContainerChildComponentUnion
-{
+public class UnknownComponentImpl extends AbstractComponentImpl
+        implements UnknownComponent,
+                MessageTopLevelComponentUnion,
+                ModalTopLevelComponentUnion,
+                ActionRowChildComponentUnion,
+                SectionContentComponentUnion,
+                SectionAccessoryComponentUnion,
+                ContainerChildComponentUnion {
     private final DataObject data;
 
-    public UnknownComponentImpl(DataObject data)
-    {
+    public UnknownComponentImpl(DataObject data) {
         this.data = data;
     }
 
     @Nonnull
     @Override
-    public UnknownComponentImpl withUniqueId(int uniqueId)
-    {
+    public UnknownComponentImpl withUniqueId(int uniqueId) {
         throw new UnsupportedOperationException("Cannot modify an unknown component");
     }
 
     @Override
-    public int getUniqueId()
-    {
+    public int getUniqueId() {
         return data.getInt("id");
     }
 
     @Override
     @Nonnull
-    public DataObject toData()
-    {
+    public DataObject toData() {
         return data;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof UnknownComponentImpl)) {
+            return false;
+        }
+        UnknownComponentImpl that = (UnknownComponentImpl) o;
+        return Objects.equals(data, that.data);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(data);
+    }
+
+    @Override
+    public String toString() {
+        return "UnknownComponent(data=" + data + ")";
     }
 }

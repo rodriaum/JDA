@@ -25,15 +25,17 @@ import net.dv8tion.jda.api.components.replacer.IReplaceable;
 import net.dv8tion.jda.api.components.utils.ComponentIterator;
 import net.dv8tion.jda.api.utils.messages.MessageRequest;
 import net.dv8tion.jda.internal.components.container.ContainerImpl;
+import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.Helpers;
 import org.jetbrains.annotations.Unmodifiable;
+
+import java.awt.*;
+import java.util.Collection;
+import java.util.List;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.awt.*;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * Component which groups components vertically, you can specify an accent color, similar to embeds,
@@ -44,8 +46,7 @@ import java.util.List;
  * @see ContainerChildComponent
  * @see ContainerChildComponentUnion
  */
-public interface Container extends MessageTopLevelComponent, IReplaceable, IDisableable
-{
+public interface Container extends MessageTopLevelComponent, IReplaceable, IDisableable {
     /**
      * Constructs a new {@link Container} from the given components.
      *
@@ -61,9 +62,8 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
      * @return The new {@link Container}
      */
     @Nonnull
-    static Container of(@Nonnull Collection<? extends ContainerChildComponent> components)
-    {
-        return ContainerImpl.of(components);
+    static Container of(@Nonnull Collection<? extends ContainerChildComponent> components) {
+        return ContainerImpl.validated(components);
     }
 
     /**
@@ -83,25 +83,24 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
      * @return The new {@link Container}
      */
     @Nonnull
-    static Container of(@Nonnull ContainerChildComponent component, @Nonnull ContainerChildComponent... components)
-    {
+    static Container of(@Nonnull ContainerChildComponent component, @Nonnull ContainerChildComponent... components) {
         return of(Helpers.mergeVararg(component, components));
     }
 
     @Override
-    default boolean isMessageCompatible()
-    {
-        if (!getType().isMessageCompatible())
+    default boolean isMessageCompatible() {
+        if (!getType().isMessageCompatible()) {
             return false;
+        }
 
         return getComponents().stream().allMatch(Component::isMessageCompatible);
     }
 
     @Override
-    default boolean isModalCompatible()
-    {
-        if (!getType().isModalCompatible())
+    default boolean isModalCompatible() {
+        if (!getType().isModalCompatible()) {
             return false;
+        }
 
         return getComponents().stream().allMatch(Component::isModalCompatible);
     }
@@ -138,8 +137,7 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
      */
     @Nonnull
     @CheckReturnValue
-    default Container withAccentColor(@Nullable Color accentColor)
-    {
+    default Container withAccentColor(@Nullable Color accentColor) {
         return withAccentColor(accentColor == null ? null : accentColor.getRGB());
     }
 
@@ -156,27 +154,61 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
     @CheckReturnValue
     Container withSpoiler(boolean spoiler);
 
+    /**
+     * Creates a new {@link Container} with the specified components.
+     *
+     * @param  components
+     *         The new components
+     *
+     * @throws IllegalArgumentException
+     *         If the provided components are {@code null} or contains {@code null}
+     *
+     * @return The new {@link Container}
+     */
+    @Nonnull
+    @CheckReturnValue
+    Container withComponents(@Nonnull Collection<? extends ContainerChildComponent> components);
+
+    /**
+     * Creates a new {@link Container} with the specified components.
+     *
+     * @param  component
+     *         The first new component
+     * @param  components
+     *         Additional new components
+     *
+     * @throws IllegalArgumentException
+     *         If the provided components are {@code null} or contains {@code null}
+     *
+     * @return The new {@link Container}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default Container withComponents(
+            @Nonnull ContainerChildComponent component, @Nonnull ContainerChildComponent... components) {
+        Checks.notNull(component, "Component");
+        Checks.notNull(components, "Components");
+        return withComponents(Helpers.mergeVararg(component, components));
+    }
+
     @Nonnull
     @Override
     @CheckReturnValue
-    default Container withDisabled(boolean disabled)
-    {
+    default Container withDisabled(boolean disabled) {
         return replace(ComponentReplacer.of(IDisableable.class, c -> true, c -> c.withDisabled(disabled)));
     }
 
     @Nonnull
     @Override
     @CheckReturnValue
-    default Container asDisabled()
-    {
+    default Container asDisabled() {
         return (Container) IDisableable.super.asDisabled();
     }
 
     @Nonnull
     @Override
     @CheckReturnValue
-    default Container asEnabled()
-    {
+    default Container asEnabled() {
         return (Container) IDisableable.super.asEnabled();
     }
 
@@ -190,8 +222,7 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
     List<ContainerChildComponentUnion> getComponents();
 
     @Override
-    default boolean isDisabled()
-    {
+    default boolean isDisabled() {
         return ComponentIterator.createStream(getComponents())
                 .filter(IDisableable.class::isInstance)
                 .map(IDisableable.class::cast)
@@ -199,8 +230,7 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
     }
 
     @Override
-    default boolean isEnabled()
-    {
+    default boolean isEnabled() {
         return ComponentIterator.createStream(getComponents())
                 .filter(IDisableable.class::isInstance)
                 .map(IDisableable.class::cast)
@@ -214,8 +244,7 @@ public interface Container extends MessageTopLevelComponent, IReplaceable, IDisa
      * @return Possibly-null {@link Color}.
      */
     @Nullable
-    default Color getAccentColor()
-    {
+    default Color getAccentColor() {
         return getAccentColorRaw() != null ? new Color(getAccentColorRaw()) : null;
     }
 

@@ -18,22 +18,21 @@ package net.dv8tion.jda.api.components.mediagallery;
 
 import net.dv8tion.jda.api.components.ResolvedMedia;
 import net.dv8tion.jda.api.utils.FileUpload;
-import net.dv8tion.jda.api.utils.data.SerializableData;
 import net.dv8tion.jda.api.utils.messages.MessageCreateBuilder;
 import net.dv8tion.jda.internal.components.mediagallery.MediaGalleryItemFileUpload;
 import net.dv8tion.jda.internal.components.mediagallery.MediaGalleryItemImpl;
 import net.dv8tion.jda.internal.utils.Checks;
 
+import java.io.InputStream;
+
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.InputStream;
 
 /**
  * A singular item (not a component) of a {@link MediaGallery}, you can mark it as a spoiler and set a description.
  */
-public interface MediaGalleryItem extends SerializableData
-{
+public interface MediaGalleryItem {
     /**
      * The maximum number of characters an item's description can have. ({@value})
      */
@@ -63,7 +62,7 @@ public interface MediaGalleryItem extends SerializableData
      * </ol>
      *
      * <p><u>Example</u>
-     * <pre><code>
+     * {@snippet lang="java":
      * MessageChannel channel; // = reference of a MessageChannel
      * MediaGalleryItem item = MediaGalleryItem.fromUrl("attachment://cat.png") // we specify this in sendFile as "cat.png"
      *     .setDescription("This is a cute car :3");
@@ -75,7 +74,7 @@ public interface MediaGalleryItem extends SerializableData
      *     .setComponents(gallery)
      *     .useComponentsV2()
      *     .queue();
-     * </code></pre>
+     * }
      *
      * @param  url
      *         The URL of the item to display
@@ -86,8 +85,7 @@ public interface MediaGalleryItem extends SerializableData
      * @return The new {@link MediaGalleryItem}
      */
     @Nonnull
-    static MediaGalleryItem fromUrl(@Nonnull String url)
-    {
+    static MediaGalleryItem fromUrl(@Nonnull String url) {
         Checks.notBlank(url, "URL");
         return new MediaGalleryItemImpl(url);
     }
@@ -103,7 +101,7 @@ public interface MediaGalleryItem extends SerializableData
      * as such you do not need to add it manually (with {@link MessageCreateBuilder#addFiles(FileUpload...)} for example).
      *
      * <p><u>Example</u>
-     * <pre><code>
+     * {@snippet lang="java":
      * MessageChannel channel; // = reference of a MessageChannel
      * // It's recommended to use a more robust HTTP library instead,
      * // such as Java 11+'s HttpClient, or OkHttp (included with JDA), among many other options.
@@ -115,7 +113,7 @@ public interface MediaGalleryItem extends SerializableData
      * channel.sendComponents(section)
      *     .useComponentsV2()
      *     .queue();
-     * </code></pre>
+     * }
      *
      * @param  file
      *         The {@link FileUpload} to display
@@ -126,8 +124,7 @@ public interface MediaGalleryItem extends SerializableData
      * @return The new {@link MediaGalleryItem}
      */
     @Nonnull
-    static MediaGalleryItem fromFile(@Nonnull FileUpload file)
-    {
+    static MediaGalleryItem fromFile(@Nonnull FileUpload file) {
         Checks.notNull(file, "FileUpload");
         return new MediaGalleryItemFileUpload(file);
     }

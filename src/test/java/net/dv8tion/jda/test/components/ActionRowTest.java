@@ -22,74 +22,101 @@ import net.dv8tion.jda.api.components.actionrow.ActionRowChildComponentUnion;
 import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.utils.data.DataObject;
-import net.dv8tion.jda.internal.components.actionrow.ActionRowImpl;
 import net.dv8tion.jda.test.AbstractSnapshotTest;
 import net.dv8tion.jda.test.ChecksHelper;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class ActionRowTest extends AbstractSnapshotTest
-{
+import static net.dv8tion.jda.api.components.replacer.ComponentReplacer.byUniqueId;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+
+public class ActionRowTest extends AbstractSnapshotTest {
 
     private static final ActionRowChildComponentUnion EXAMPLE_BUTTON =
-            (ActionRowChildComponentUnion) Button.primary("id", "label");
+            (ActionRowChildComponentUnion) Button.primary("id", "label").withUniqueId(1);
     private static final ActionRowChildComponentUnion EXAMPLE_MENU =
-            (ActionRowChildComponentUnion) EntitySelectMenu
-                    .create("id", EntitySelectMenu.SelectTarget.ROLE)
+            (ActionRowChildComponentUnion) EntitySelectMenu.create("id", EntitySelectMenu.SelectTarget.ROLE)
+                    .setUniqueId(2)
                     .build();
 
     @Test
-    void testGetMaxAllowedIsUpdated()
-    {
+    void testGetMaxAllowedIsUpdated() {
         DataObject actual = DataObject.empty();
 
-        for (Component.Type type : Component.Type.values())
+        for (Component.Type type : Component.Type.values()) {
             actual.put(type.name(), ActionRow.getMaxAllowed(type));
+        }
 
         snapshotHandler.compareWithSnapshot(actual, null);
     }
 
     @Test
-    void testEmptyRowThrows()
-    {
-        ChecksHelper.<ActionRowChildComponentUnion>assertCollectionChecks(
-                        "Row",
-                        coll -> new ActionRowImpl(coll, -1)
-                )
+    void testEmptyRowThrows() {
+        ChecksHelper.<ActionRowChildComponentUnion>assertCollectionChecks("Row", ActionRow::of)
                 .checksNotNull()
                 .checksNotEmpty();
     }
 
     @Test
-    void testCombiningDifferentElementsThrows()
-    {
-        final List<ActionRowChildComponentUnion> list = Arrays.asList(EXAMPLE_BUTTON, EXAMPLE_MENU);
+    void testCombiningDifferentElementsThrows() {
+        List<ActionRowChildComponentUnion> list = Arrays.asList(EXAMPLE_BUTTON, EXAMPLE_MENU);
 
-        Assertions.assertThatIllegalArgumentException()
-                .isThrownBy(() -> new ActionRowImpl(list, -1));
+        assertThatIllegalArgumentException().isThrownBy(() -> ActionRow.of(list));
     }
 
     @Test
-    void testPartitionOf()
-    {
-        Assertions.assertThatIllegalArgumentException()
-                        .isThrownBy(() -> ActionRow.partitionOf(Collections.emptyList()));
+    void testPartitionOf() {
+        assertThatIllegalArgumentException().isThrownBy(() -> ActionRow.partitionOf(Collections.emptyList()));
 
-        final List<ActionRow> rowsOfSixButtons = ActionRow.partitionOf(EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON);
-        Assertions.assertThat(rowsOfSixButtons)
+        List<ActionRow> rowsOfSixButtons = ActionRow.partitionOf(
+                EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON);
+        assertThat(rowsOfSixButtons)
                 .isEqualTo(Arrays.asList(
                         ActionRow.of(EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON),
-                        ActionRow.of(EXAMPLE_BUTTON)
-                ));
+                        ActionRow.of(EXAMPLE_BUTTON)));
 
-        final List<ActionRow> rowsOfFiveButtons = ActionRow.partitionOf(EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON);
-        Assertions.assertThat(rowsOfFiveButtons)
+        List<ActionRow> rowsOfFiveButtons =
+                ActionRow.partitionOf(EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON);
+        assertThat(rowsOfFiveButtons)
                 .isEqualTo(Collections.singletonList(
-                        ActionRow.of(EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON)
-                ));
+                        ActionRow.of(EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON, EXAMPLE_BUTTON)));
+    }
+
+    @Test
+    void testReplacerWithValidReplacement() {
+        ActionRow actionRow = ActionRow.of(EXAMPLE_BUTTON);
+
+        Button newButton = Button.secondary("custom-id", "Label");
+        ActionRow updatedRow = actionRow.replace(byUniqueId(EXAMPLE_BUTTON.getUniqueId(), newButton));
+
+        assertThat(updatedRow.getComponents()).containsExactly((ActionRowChildComponentUnion) newButton);
+    }
+
+    @Test
+    void testReplacerRemovingOneButton() {
+        ActionRow actionRow = ActionRow.of(EXAMPLE_BUTTON, EXAMPLE_BUTTON.withUniqueId(42));
+        ActionRow updatedRow = actionRow.replace(byUniqueId(EXAMPLE_BUTTON.getUniqueId(), (Component) null));
+
+        assertThat(updatedRow.getComponents()).containsExactly(EXAMPLE_BUTTON);
+    }
+
+    @Test
+    void testReplacerWithEmptyingReplacement() {
+        ActionRow actionRow = ActionRow.of(EXAMPLE_BUTTON);
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> actionRow.replace(byUniqueId(EXAMPLE_BUTTON.getUniqueId(), (Component) null)));
+    }
+
+    @Test
+    void testReplacerWithInvalidReplacement() {
+        int uniqueId = 42;
+        ActionRow actionRow = ActionRow.of(EXAMPLE_BUTTON, EXAMPLE_BUTTON.withUniqueId(uniqueId));
+
+        assertThatIllegalArgumentException().isThrownBy(() -> actionRow.replace(byUniqueId(uniqueId, EXAMPLE_MENU)));
     }
 }

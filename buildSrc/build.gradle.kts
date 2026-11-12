@@ -1,3 +1,7 @@
+import org.gradle.kotlin.dsl.withType
+import org.jetbrains.kotlin.gradle.dsl.jvm.JvmTargetValidationMode
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 /*
  * Copyright 2015 Austin Keener, Michael Ritter, Florian Spieß, and the JDA contributors
  *
@@ -16,7 +20,9 @@
 
 plugins {
     `kotlin-dsl`
-    id("java-gradle-plugin")
+    `java-gradle-plugin`
+
+    alias(libs.plugins.version.catalog.update)
 }
 
 repositories {
@@ -26,4 +32,26 @@ repositories {
 
 dependencies {
     implementation(gradleApi())
+    implementation(libs.gradle.plugin.download)
+    implementation(libs.javaparser)
+    implementation(libs.javapoet)
+    implementation(libs.tools.jackson)
+}
+
+kotlin {
+    jvmToolchain(25)
+}
+
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(25))
+    }
+}
+
+tasks.withType(KotlinCompile::class).configureEach {
+    jvmTargetValidationMode.set(JvmTargetValidationMode.IGNORE)
+}
+
+tasks.register("format") {
+    dependsOn("versionCatalogFormat")
 }

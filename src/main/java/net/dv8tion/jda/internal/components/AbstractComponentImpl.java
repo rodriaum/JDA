@@ -18,10 +18,15 @@ package net.dv8tion.jda.internal.components;
 
 import net.dv8tion.jda.api.components.Component;
 import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.attachmentupload.AttachmentUpload;
 import net.dv8tion.jda.api.components.buttons.Button;
+import net.dv8tion.jda.api.components.checkbox.Checkbox;
+import net.dv8tion.jda.api.components.checkboxgroup.CheckboxGroup;
 import net.dv8tion.jda.api.components.container.Container;
 import net.dv8tion.jda.api.components.filedisplay.FileDisplay;
+import net.dv8tion.jda.api.components.label.Label;
 import net.dv8tion.jda.api.components.mediagallery.MediaGallery;
+import net.dv8tion.jda.api.components.radiogroup.RadioGroup;
 import net.dv8tion.jda.api.components.section.Section;
 import net.dv8tion.jda.api.components.selections.EntitySelectMenu;
 import net.dv8tion.jda.api.components.selections.StringSelectMenu;
@@ -34,56 +39,47 @@ import net.dv8tion.jda.internal.utils.UnionUtil;
 
 import javax.annotation.Nonnull;
 
-public abstract class AbstractComponentImpl implements SerializableData
-{
+public abstract class AbstractComponentImpl implements SerializableData {
 
     // -- Union hooks --
 
     @Nonnull
-    public ActionRow asActionRow()
-    {
+    public ActionRow asActionRow() {
         return toComponentType(ActionRow.class);
     }
 
     @Nonnull
-    public Button asButton()
-    {
+    public Button asButton() {
         return toComponentType(Button.class);
     }
 
     @Nonnull
-    public StringSelectMenu asStringSelectMenu()
-    {
+    public StringSelectMenu asStringSelectMenu() {
         return toComponentType(StringSelectMenu.class);
     }
 
     @Nonnull
-    public EntitySelectMenu asEntitySelectMenu()
-    {
+    public EntitySelectMenu asEntitySelectMenu() {
         return toComponentType(EntitySelectMenu.class);
     }
 
     @Nonnull
-    public TextInput asTextInput()
-    {
+    public TextInput asTextInput() {
         return toComponentType(TextInput.class);
     }
 
     @Nonnull
-    public Section asSection()
-    {
+    public Section asSection() {
         return toComponentType(Section.class);
     }
 
     @Nonnull
-    public TextDisplay asTextDisplay()
-    {
+    public TextDisplay asTextDisplay() {
         return toComponentType(TextDisplay.class);
     }
 
     @Nonnull
-    public MediaGallery asMediaGallery()
-    {
+    public MediaGallery asMediaGallery() {
         return toComponentType(MediaGallery.class);
     }
 
@@ -93,21 +89,43 @@ public abstract class AbstractComponentImpl implements SerializableData
     }
 
     @Nonnull
-    public Separator asSeparator()
-    {
+    public Separator asSeparator() {
         return toComponentType(Separator.class);
     }
 
     @Nonnull
-    public FileDisplay asFileDisplay()
-    {
+    public FileDisplay asFileDisplay() {
         return toComponentType(FileDisplay.class);
     }
 
     @Nonnull
-    public Container asContainer()
-    {
+    public Container asContainer() {
         return toComponentType(Container.class);
+    }
+
+    @Nonnull
+    public Label asLabel() {
+        return toComponentType(Label.class);
+    }
+
+    @Nonnull
+    public AttachmentUpload asAttachmentUpload() {
+        return toComponentType(AttachmentUpload.class);
+    }
+
+    @Nonnull
+    public RadioGroup asRadioGroup() {
+        return toComponentType(RadioGroup.class);
+    }
+
+    @Nonnull
+    public CheckboxGroup asCheckboxGroup() {
+        return toComponentType(CheckboxGroup.class);
+    }
+
+    @Nonnull
+    public Checkbox asCheckbox() {
+        return toComponentType(Checkbox.class);
     }
 
     protected <T extends Component> T toComponentType(Class<T> type) {

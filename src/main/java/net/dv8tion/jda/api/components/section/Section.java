@@ -30,10 +30,11 @@ import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.Helpers;
 import org.jetbrains.annotations.Unmodifiable;
 
-import javax.annotation.CheckReturnValue;
-import javax.annotation.Nonnull;
 import java.util.Collection;
 import java.util.List;
+
+import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 
 /**
  * Component which contains the main content on the left and an accessory on the right.
@@ -47,8 +48,7 @@ import java.util.List;
  * @see SectionAccessoryComponent
  * @see SectionAccessoryComponentUnion
  */
-public interface Section extends MessageTopLevelComponent, ContainerChildComponent, IReplaceable, IDisableable
-{
+public interface Section extends MessageTopLevelComponent, ContainerChildComponent, IReplaceable, IDisableable {
     /**
      * How many {@link SectionContentComponent} can be in this section. ({@value})
      */
@@ -72,9 +72,10 @@ public interface Section extends MessageTopLevelComponent, ContainerChildCompone
      * @return The new {@link Section}
      */
     @Nonnull
-    static Section of(@Nonnull SectionAccessoryComponent accessory, @Nonnull Collection<? extends SectionContentComponent> components)
-    {
-        return SectionImpl.of(accessory, components);
+    static Section of(
+            @Nonnull SectionAccessoryComponent accessory,
+            @Nonnull Collection<? extends SectionContentComponent> components) {
+        return SectionImpl.validated(accessory, components);
     }
 
     /**
@@ -97,28 +98,30 @@ public interface Section extends MessageTopLevelComponent, ContainerChildCompone
      * @return The new {@link Section}
      */
     @Nonnull
-    static Section of(@Nonnull SectionAccessoryComponent accessory, @Nonnull SectionContentComponent component, @Nonnull SectionContentComponent... components)
-    {
+    static Section of(
+            @Nonnull SectionAccessoryComponent accessory,
+            @Nonnull SectionContentComponent component,
+            @Nonnull SectionContentComponent... components) {
         Checks.notNull(component, "Component");
         Checks.noneNull(components, "Components");
         return of(accessory, Helpers.mergeVararg(component, components));
     }
 
     @Override
-    default boolean isMessageCompatible()
-    {
-        if (!getType().isMessageCompatible())
+    default boolean isMessageCompatible() {
+        if (!getType().isMessageCompatible()) {
             return false;
+        }
 
         return getContentComponents().stream().allMatch(Component::isMessageCompatible)
                 && getAccessory().isMessageCompatible();
     }
 
     @Override
-    default boolean isModalCompatible()
-    {
-        if (!getType().isModalCompatible())
+    default boolean isModalCompatible() {
+        if (!getType().isModalCompatible()) {
             return false;
+        }
 
         return getContentComponents().stream().allMatch(Component::isModalCompatible)
                 && getAccessory().isModalCompatible();
@@ -136,26 +139,75 @@ public interface Section extends MessageTopLevelComponent, ContainerChildCompone
     @Nonnull
     @Override
     @CheckReturnValue
-    default Section withDisabled(boolean disabled)
-    {
+    default Section withDisabled(boolean disabled) {
         return replace(ComponentReplacer.of(IDisableable.class, c -> true, c -> c.withDisabled(disabled)));
     }
 
     @Nonnull
     @Override
     @CheckReturnValue
-    default Section asDisabled()
-    {
+    default Section asDisabled() {
         return (Section) IDisableable.super.asDisabled();
     }
 
     @Nonnull
     @Override
     @CheckReturnValue
-    default Section asEnabled()
-    {
+    default Section asEnabled() {
         return (Section) IDisableable.super.asEnabled();
     }
+
+    /**
+     * Creates a new {@link Section} with the specified content components.
+     *
+     * @param  components
+     *         The new content components
+     *
+     * @throws IllegalArgumentException
+     *         If the provided components are {@code null} or contains {@code null}
+     *
+     * @return The new {@link Section}
+     */
+    @Nonnull
+    @CheckReturnValue
+    Section withContentComponents(@Nonnull Collection<? extends SectionContentComponent> components);
+
+    /**
+     * Creates a new {@link Section} with the specified content components.
+     *
+     * @param  component
+     *         The first new content component
+     * @param  components
+     *         Additional new content components
+     *
+     * @throws IllegalArgumentException
+     *         If the provided components are {@code null} or contains {@code null}
+     *
+     * @return The new {@link Section}
+     */
+    @Nonnull
+    @CheckReturnValue
+    default Section withContentComponents(
+            @Nonnull SectionContentComponent component, @Nonnull SectionContentComponent... components) {
+        Checks.notNull(component, "Component");
+        Checks.notNull(components, "Components");
+        return withContentComponents(Helpers.mergeVararg(component, components));
+    }
+
+    /**
+     * Creates a new {@link Section} with the specified accessory.
+     *
+     * @param  accessory
+     *         The new accessory
+     *
+     * @throws IllegalArgumentException
+     *         If the provided accessory is {@code null}
+     *
+     * @return The new {@link Section}
+     */
+    @Nonnull
+    @CheckReturnValue
+    Section withAccessory(@Nonnull SectionAccessoryComponent accessory);
 
     /**
      * Returns an immutable list with the components contained by this section.
@@ -175,11 +227,11 @@ public interface Section extends MessageTopLevelComponent, ContainerChildCompone
     SectionAccessoryComponentUnion getAccessory();
 
     @Override
-    default boolean isDisabled()
-    {
-        final SectionAccessoryComponentUnion accessory = getAccessory();
-        if (accessory instanceof IDisableable && ((IDisableable) accessory).isEnabled())
+    default boolean isDisabled() {
+        SectionAccessoryComponentUnion accessory = getAccessory();
+        if (accessory instanceof IDisableable && ((IDisableable) accessory).isEnabled()) {
             return false;
+        }
 
         return ComponentIterator.createStream(getContentComponents())
                 .filter(IDisableable.class::isInstance)
@@ -188,11 +240,11 @@ public interface Section extends MessageTopLevelComponent, ContainerChildCompone
     }
 
     @Override
-    default boolean isEnabled()
-    {
-        final SectionAccessoryComponentUnion accessory = getAccessory();
-        if (accessory instanceof IDisableable && ((IDisableable) accessory).isDisabled())
+    default boolean isEnabled() {
+        SectionAccessoryComponentUnion accessory = getAccessory();
+        if (accessory instanceof IDisableable && ((IDisableable) accessory).isDisabled()) {
             return false;
+        }
 
         return ComponentIterator.createStream(getContentComponents())
                 .filter(IDisableable.class::isInstance)

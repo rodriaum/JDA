@@ -19,6 +19,7 @@ package net.dv8tion.jda.api.utils.messages;
 import net.dv8tion.jda.api.components.Component;
 import net.dv8tion.jda.api.components.MessageTopLevelComponent;
 import net.dv8tion.jda.api.components.tree.ComponentTree;
+import net.dv8tion.jda.api.entities.EmbedType;
 import net.dv8tion.jda.api.entities.IMentionable;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -27,14 +28,13 @@ import net.dv8tion.jda.api.utils.AttachedFile;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.internal.utils.Checks;
 
+import java.io.File;
+import java.util.*;
+import java.util.stream.Collectors;
+
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
 
 /**
  * Abstraction of the common setters used for messages in the API.
@@ -49,8 +49,7 @@ import java.util.EnumSet;
  * @see   MessageCreateBuilder
  * @see   MessageEditBuilder
  */
-public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
-{
+public interface MessageRequest<R extends MessageRequest<R>> extends MessageData {
     /**
      * Sets the {@link net.dv8tion.jda.api.entities.Message.MentionType MentionTypes} that should be parsed by default.
      * This just sets the default for all RestActions and can be overridden on a per-action basis using {@link #setAllowedMentions(Collection)}.
@@ -61,17 +60,16 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * (unless whitelisting via one of the {@code mention*} methods is used).
      *
      * <p><b>Example</b><br>
-     * <pre>{@code
+     * {@snippet lang="java":
      * // Disable EVERYONE and HERE mentions by default (to avoid mass ping)
      * EnumSet<Message.MentionType> deny = EnumSet.of(Message.MentionType.EVERYONE, Message.MentionType.HERE);
      * MessageRequest.setDefaultMentions(EnumSet.complementOf(deny));
-     * }</pre>
+     * }
      *
      * @param  allowedMentions
      *         MentionTypes that are allowed to being parsed and pinged. {@code null} to disable and allow all mentions.
      */
-    static void setDefaultMentions(@Nullable Collection<Message.MentionType> allowedMentions)
-    {
+    static void setDefaultMentions(@Nullable Collection<Message.MentionType> allowedMentions) {
         AllowedMentionsData.setDefaultMentions(allowedMentions);
     }
 
@@ -82,8 +80,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @return Default mentions set by AllowedMentions.setDefaultMentions(Collection)
      */
     @Nonnull
-    static EnumSet<Message.MentionType> getDefaultMentions()
-    {
+    static EnumSet<Message.MentionType> getDefaultMentions() {
         return AllowedMentionsData.getDefaultMentions();
     }
 
@@ -95,8 +92,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @param mention
      *        True, if replies should mention by default
      */
-    static void setDefaultMentionRepliedUser(boolean mention)
-    {
+    static void setDefaultMentionRepliedUser(boolean mention) {
         AllowedMentionsData.setDefaultMentionRepliedUser(mention);
     }
 
@@ -109,8 +105,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @param  use
      *         {@code true} to enable V2 components by default, {@code false} to disabled them by default.
      */
-    static void setDefaultUseComponentsV2(boolean use)
-    {
+    static void setDefaultUseComponentsV2(boolean use) {
         AbstractMessageBuilder.isDefaultUseComponentsV2 = use;
     }
 
@@ -122,8 +117,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      *
      * @return {@code true} if every message will use Components V2 by default, {@code false} if not
      */
-    static boolean isDefaultUseComponentsV2()
-    {
+    static boolean isDefaultUseComponentsV2() {
         return AbstractMessageBuilder.isDefaultUseComponentsV2;
     }
 
@@ -136,8 +130,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      *
      * @return True, if replies mention by default
      */
-    static boolean isDefaultMentionRepliedUser()
-    {
+    static boolean isDefaultMentionRepliedUser() {
         return AllowedMentionsData.isDefaultMentionRepliedUser();
     }
 
@@ -189,8 +182,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @return The same instance for chaining
      */
     @Nonnull
-    default R setEmbeds(@Nonnull MessageEmbed... embeds)
-    {
+    default R setEmbeds(@Nonnull MessageEmbed... embeds) {
         return setEmbeds(Arrays.asList(embeds));
     }
 
@@ -199,7 +191,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * <br>You can use {@link Collections#emptyList()} to remove all components from the message.
      *
      * <p><b>Example: Set action rows</b><br>
-     * <pre>{@code
+     * {@snippet lang="java":
      * final List<MessageTopLevelComponent> list = new ArrayList<>();
      * list.add(ActionRow.of(selectMenu); // first row
      * list.add(ActionRow.of(button1, button2)); // second row (shows below the first)
@@ -207,14 +199,14 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * channel.sendMessage("Content here")
      *   .setComponents(list)
      *   .queue();
-     * }</pre>
+     * }
      *
      * <p><b>Example: Remove action rows</b><br>
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessage("Content here")
      *    .setComponents(Collections.emptyList())
      *    .queue();
-     * }</pre>
+     * }
      *
      * @param  components
      *         The {@link MessageTopLevelComponent MessageTopLevelComponents} to set, can be empty to remove components,
@@ -238,20 +230,20 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * <br>You can call this method without anything to remove all components from the message.
      *
      * <p><b>Example: Set action rows</b><br>
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessage("Content here")
      *   .setComponents(
      *     ActionRow.of(selectMenu), // first row
      *     ActionRow.of(button1, button2)) // second row (shows below the first)
      *   .queue();
-     * }</pre>
+     * }
      *
      * <p><b>Example: Remove action rows</b><br>
-     * <pre>{@code
+     * {@snippet lang="java":
      * channel.sendMessage("Content here")
      *   .setComponents()
      *   .queue();
-     * }</pre>
+     * }
      *
      * @param  components
      *         The {@link MessageTopLevelComponent MessageTopLevelComponents} to set, can be empty to remove components,
@@ -268,8 +260,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @return The same instance for chaining
      */
     @Nonnull
-    default R setComponents(@Nonnull MessageTopLevelComponent... components)
-    {
+    default R setComponents(@Nonnull MessageTopLevelComponent... components) {
         return setComponents(Arrays.asList(components));
     }
 
@@ -294,8 +285,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @see    net.dv8tion.jda.api.components.tree.MessageComponentTree MessageComponentTree
      */
     @Nonnull
-    default R setComponents(@Nonnull ComponentTree<? extends MessageTopLevelComponent> tree)
-    {
+    default R setComponents(@Nonnull ComponentTree<? extends MessageTopLevelComponent> tree) {
         Checks.notNull(tree, "ComponentTree");
         return setComponents(tree.getComponents());
     }
@@ -358,8 +348,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @see    #setDefaultUseComponentsV2(boolean)
      */
     @Nonnull
-    default R useComponentsV2()
-    {
+    default R useComponentsV2() {
         return useComponentsV2(true);
     }
 
@@ -389,7 +378,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      *
      * <p><b>Example</b><br>
      * Create an embed with a custom image, uploaded alongside the message:
-     * <pre>{@code
+     * {@snippet lang="java":
      * MessageEmbed embed = new EmbedBuilder()
      *         .setDescription("Image of a cute cat")
      *         .setImage("attachment://cat.png") // here "cat.png" is the name used in the FileUpload.fromData factory method
@@ -401,7 +390,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * channel.sendMessageEmbeds(embed)
      *        .setFiles(file)
      *        .queue();
-     * }</pre>
+     * }
      *
      * @param  files
      *         The {@link FileUpload FileUploads} to attach to the message,
@@ -427,7 +416,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      *
      * <p><b>Example</b><br>
      * Create an embed with a custom image, uploaded alongside the message:
-     * <pre>{@code
+     * {@snippet lang="java":
      * MessageEmbed embed = new EmbedBuilder()
      *         .setDescription("Image of a cute cat")
      *         .setImage("attachment://cat.png") // here "cat.png" is the name used in the FileUpload.fromData factory method
@@ -439,7 +428,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * channel.sendMessageEmbeds(embed)
      *        .setFiles(file)
      *        .queue();
-     * }</pre>
+     * }
      *
      * @param  files
      *         The {@link FileUpload FileUploads} to attach to the message,
@@ -451,8 +440,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @return The same instance for chaining
      */
     @Nonnull
-    default R setFiles(@Nonnull FileUpload... files)
-    {
+    default R setFiles(@Nonnull FileUpload... files) {
         Checks.noneNull(files, "Files");
         return setFiles(Arrays.asList(files));
     }
@@ -543,8 +531,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      */
     @Nonnull
     @CheckReturnValue
-    default R mention(@Nonnull IMentionable... mentions)
-    {
+    default R mention(@Nonnull IMentionable... mentions) {
         Checks.notNull(mentions, "Mentions");
         return mention(Arrays.asList(mentions));
     }
@@ -593,8 +580,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      */
     @Nonnull
     @CheckReturnValue
-    default R mentionUsers(@Nonnull String... userIds)
-    {
+    default R mentionUsers(@Nonnull String... userIds) {
         Checks.notNull(userIds, "User IDs");
         return mentionUsers(Arrays.asList(userIds));
     }
@@ -620,12 +606,12 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      */
     @Nonnull
     @CheckReturnValue
-    default R mentionUsers(@Nonnull long... userIds)
-    {
+    default R mentionUsers(@Nonnull long... userIds) {
         Checks.notNull(userIds, "UserId array");
         String[] stringIds = new String[userIds.length];
-        for (int i = 0; i < userIds.length; i++)
+        for (int i = 0; i < userIds.length; i++) {
             stringIds[i] = Long.toUnsignedString(userIds[i]);
+        }
         return mentionUsers(stringIds);
     }
 
@@ -673,8 +659,7 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      */
     @Nonnull
     @CheckReturnValue
-    default R mentionRoles(@Nonnull String... roleIds)
-    {
+    default R mentionRoles(@Nonnull String... roleIds) {
         Checks.notNull(roleIds, "Role IDs");
         return mentionRoles(Arrays.asList(roleIds));
     }
@@ -700,12 +685,12 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      */
     @Nonnull
     @CheckReturnValue
-    default R mentionRoles(@Nonnull long... roleIds)
-    {
+    default R mentionRoles(@Nonnull long... roleIds) {
         Checks.notNull(roleIds, "RoleId array");
         String[] stringIds = new String[roleIds.length];
-        for (int i = 0; i < roleIds.length; i++)
+        for (int i = 0; i < roleIds.length; i++) {
             stringIds[i] = Long.toUnsignedString(roleIds[i]);
+        }
         return mentionRoles(stringIds);
     }
 
@@ -725,5 +710,16 @@ public interface MessageRequest<R extends MessageRequest<R>> extends MessageData
      * @return The same instance for chaining
      */
     @Nonnull
-    R applyMessage(@Nonnull Message message);
+    default R applyMessage(@Nonnull Message message) {
+        Checks.notNull(message, "Message");
+        Checks.check(!message.getType().isSystem(), "Cannot copy a system message");
+        List<MessageEmbed> embeds = message.getEmbeds().stream()
+                .filter(e -> e.getType() == EmbedType.RICH)
+                .collect(Collectors.toList());
+        return setContent(message.getContentRaw())
+                .setEmbeds(embeds)
+                .setComponents(message.getComponents())
+                .useComponentsV2(message.isUsingComponentsV2())
+                .setSuppressEmbeds(message.isSuppressedEmbeds());
+    }
 }

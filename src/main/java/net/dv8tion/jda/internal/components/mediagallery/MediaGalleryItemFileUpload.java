@@ -20,28 +20,27 @@ import net.dv8tion.jda.api.components.ResolvedMedia;
 import net.dv8tion.jda.api.components.mediagallery.MediaGalleryItem;
 import net.dv8tion.jda.api.utils.FileUpload;
 import net.dv8tion.jda.api.utils.data.DataObject;
+import net.dv8tion.jda.api.utils.data.SerializableData;
 import net.dv8tion.jda.internal.entities.FileContainerMixin;
 import net.dv8tion.jda.internal.utils.Checks;
 import net.dv8tion.jda.internal.utils.EntityString;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-public class MediaGalleryItemFileUpload implements MediaGalleryItem, FileContainerMixin
-{
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+public class MediaGalleryItemFileUpload implements MediaGalleryItem, FileContainerMixin, SerializableData {
     private final FileUpload file; // Contains name and description
     private final String description;
     private final boolean spoiler;
 
-    public MediaGalleryItemFileUpload(FileUpload upload)
-    {
+    public MediaGalleryItemFileUpload(FileUpload upload) {
         this(upload, null, false);
     }
 
-    public MediaGalleryItemFileUpload(FileUpload file, String description, boolean spoiler)
-    {
+    public MediaGalleryItemFileUpload(FileUpload file, String description, boolean spoiler) {
         this.file = file;
         this.description = description;
         this.spoiler = spoiler;
@@ -49,10 +48,8 @@ public class MediaGalleryItemFileUpload implements MediaGalleryItem, FileContain
 
     @Nonnull
     @Override
-    public MediaGalleryItem withDescription(@Nullable String description)
-    {
-        if (description != null)
-        {
+    public MediaGalleryItem withDescription(@Nullable String description) {
+        if (description != null) {
             Checks.notBlank(description, "Description");
             Checks.notLonger(description, MAX_DESCRIPTION_LENGTH, "Description");
         }
@@ -61,51 +58,45 @@ public class MediaGalleryItemFileUpload implements MediaGalleryItem, FileContain
 
     @Nonnull
     @Override
-    public MediaGalleryItem withSpoiler(boolean spoiler)
-    {
+    public MediaGalleryItem withSpoiler(boolean spoiler) {
         return new MediaGalleryItemFileUpload(file, description, spoiler);
     }
 
     @Nonnull
     @Override
-    public String getUrl()
-    {
+    public String getUrl() {
         // FileUpload is mutable unfortunately
         return "attachment://" + file.getName();
     }
 
     @Nullable
     @Override
-    public ResolvedMedia getResolvedMedia()
-    {
+    public ResolvedMedia getResolvedMedia() {
         return null;
     }
 
     @Override
-    public Stream<FileUpload> getFiles()
-    {
+    public Stream<FileUpload> getFiles() {
         return Stream.of(file);
     }
 
     @Nullable
     @Override
-    public String getDescription()
-    {
-        if (description != null)
+    public String getDescription() {
+        if (description != null) {
             return description;
+        }
         return file.getDescription(); // FileUpload is mutable
     }
 
     @Override
-    public boolean isSpoiler()
-    {
+    public boolean isSpoiler() {
         return spoiler;
     }
 
     @Nonnull
     @Override
-    public DataObject toData()
-    {
+    public DataObject toData() {
         return DataObject.empty()
                 .put("media", DataObject.empty().put("url", getUrl()))
                 .put("description", getDescription())
@@ -113,23 +104,26 @@ public class MediaGalleryItemFileUpload implements MediaGalleryItem, FileContain
     }
 
     @Override
-    public boolean equals(Object o)
-    {
-        if (o == this) return true;
-        if (!(o instanceof MediaGalleryItemFileUpload)) return false;
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (!(o instanceof MediaGalleryItemFileUpload)) {
+            return false;
+        }
         MediaGalleryItemFileUpload that = (MediaGalleryItemFileUpload) o;
-        return spoiler == that.spoiler && Objects.equals(file, that.file) && Objects.equals(description, that.description);
+        return spoiler == that.spoiler
+                && Objects.equals(file, that.file)
+                && Objects.equals(description, that.description);
     }
 
     @Override
-    public int hashCode()
-    {
+    public int hashCode() {
         return Objects.hash(file, description, spoiler);
     }
 
     @Override
-    public String toString()
-    {
+    public String toString() {
         return new EntityString(this)
                 .addMetadata("file", file)
                 .addMetadata("spoiler", spoiler)

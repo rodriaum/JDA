@@ -25,9 +25,10 @@ import net.dv8tion.jda.api.entities.channel.concrete.ThreadChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.GuildChannel;
 import net.dv8tion.jda.api.requests.RestAction;
 
+import java.util.function.Consumer;
+
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnull;
-import java.util.function.Consumer;
 
 /**
  * Common features of all {@link RestAction RestActions} that create a new thread.
@@ -37,8 +38,7 @@ import java.util.function.Consumer;
  * @param <R>
  *        The common return type of setters, allowing for fluid interface design
  */
-public interface AbstractThreadCreateAction<T, R extends AbstractThreadCreateAction<T, R>> extends RestAction<T>
-{
+public interface AbstractThreadCreateAction<T, R extends AbstractThreadCreateAction<T, R>> extends RestAction<T> {
     /**
      * The guild to create this {@link GuildChannel} for.
      *
@@ -93,9 +93,7 @@ public interface AbstractThreadCreateAction<T, R extends AbstractThreadCreateAct
      * <p>A channel slowmode <b>must not</b> be negative nor greater than {@link ISlowmodeChannel#MAX_SLOWMODE}!
      *
      * <p>Note: Bots are unaffected by this.
-     * <br>Having {@link Permission#MESSAGE_MANAGE MESSAGE_MANAGE} or
-     * {@link Permission#MANAGE_CHANNEL MANAGE_CHANNEL} permission also
-     * grants immunity to slowmode.
+     * <br>Having the {@link Permission#BYPASS_SLOWMODE BYPASS_SLOWMODE} permission also grants immunity to slowmode.
      *
      * @param  slowmode
      *         The new slowmode
